@@ -1,16 +1,45 @@
 import cv2
+import numpy as np
 from pathlib import Path
+from typing import Union
 
-def compare_rgb_path(image_path_1: Path, image_path_2) -> float:
-    image_1 = cv2.imread(image_path_1)
-    print(type(image_1))
-    image_2 = cv2.imread(image_path_2)
+def compare_rgb_file(image_path_1: Union[Path, str], image_path_2: Union[Path, str]) -> float:
+    image_1 = cv2.imread(str(image_path_1))
+    image_2 = cv2.imread(str(image_path_2))
     return compare_rgb(image_1, image_2)
 
-def compare_rgb(image_1, image_2) -> float:
-    pass
+def compare_grayscale_file(image_path_1: Union[Path, str], image_path_2: Union[Path, str]) -> float:
+    image_1 = cv2.imread(str(image_path_1))
+    image_2 = cv2.imread(str(image_path_2))
+    image_1 = cv2.cvtColor(image_1, cv2.COLOR_BGR2GRAY)
+    image_2 = cv2.cvtColor(image_2, cv2.COLOR_BGR2GRAY)
+    return compare_grayscale(image_1, image_2)
 
-def mse(image_1, image_2) -> float:
-    pass
+def compare_rgb(image_1: np.ndarray, image_2: np.ndarray) -> float:
+    error: float = 0.0
 
+    # Calculate Blue Channel MSE
+    blue_1: np.ndarray = image_1[:, :, 0]
+    blue_2: np.ndarray = image_2[:, :, 0]
+    error += mse(blue_1, blue_2)
 
+    # Calculate Green Channel MSE
+    green_1: np.ndarray = image_1[:, :, 1]
+    green_2: np.ndarray = image_2[:, :, 1]
+    error += mse(green_1, green_2)
+
+    # Calculate Red Channel MSE
+    red_1: np.ndarray = image_1[:, :, 2]
+    red_2: np.ndarray = image_2[:, :, 2]
+    error += mse(red_1, red_2)
+
+    return error
+
+def compare_grayscale(image_1: np.ndarray, image_2: np.ndarray) -> float:
+    return mse(image_1, image_2)
+
+def mse(channel_1: np.ndarray, channel_2: np.ndarray) -> float:
+    h, w = channel_1.shape
+    difference = cv2.subtract(channel_1, channel_2)
+    error = np.sum(difference ** 2) / float(h * w)
+    return error
