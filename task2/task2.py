@@ -10,3 +10,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+    # Get bounding boxes, sort by size, remove all lower than some size threshold
