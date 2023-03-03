@@ -39,7 +39,7 @@ def compare_grayscale(image_1: np.ndarray, image_2: np.ndarray) -> float:
     return mse(image_1, image_2)
 
 def mse(channel_1: np.ndarray, channel_2: np.ndarray) -> float:
-    h, w = channel_1.shape
+    image_height, image_width = channel_1.shape
     difference = cv2.subtract(channel_1, channel_2)
-    error = np.sum(difference ** 2) / float(h * w)
+    error = np.sum(difference ** 2) / float(image_height * image_width)
     return error
