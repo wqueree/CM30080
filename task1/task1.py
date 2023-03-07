@@ -5,18 +5,18 @@ import numpy as np
 import sys
 
 
-def preprocess_image(path):
+def preprocess_image(img_path):
     """
     - Read image in\n
     - Convert to Grayscale\n
     - Apply a Gaussian Blur to remove noise
 
-    :param path: path to image
+    :param img_path: path to image
     :returns: blurred and grayscale image
     """
 
     # Read the original image
-    img = cv2.imread(path)
+    img = cv2.imread(img_path)
 
     # Convert to grayscale
     img_gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -80,7 +80,7 @@ def calculate_gradients(line_coords):
 def calculate_line_segments(line_coords):
     """
     Taking three points (line_coords) find the average and return three points.\n
-    - The points consist of the intersection and the two ends that do not meet
+    - The points consist of where the lines intersect and the two ends that do not meet
     """
     # check which x and y coords are similar
     tolerance = 10
@@ -170,16 +170,17 @@ def cosine_rule(point_1, point_2, point_3):
     return int(degrees(acos(((a ** 2) + (b ** 2) - (c ** 2))/(2 * a * b))))
 
 
+# Function to apply necessary checks on image list file
 def file_name_checks(args):
     if len(args) == 1:
         print("Please provide the name of the text file containing image names and angles as an argument.")
         exit()
-    file_name = sys.argv[1]
-    if not file_name.endswith(".txt"):
+    file = sys.argv[1]
+    if not file.endswith(".txt"):
         print("Please provide file as a .txt type")
         exit()
 
-    return file_name
+    return file
 
 
 file_name = file_name_checks(sys.argv)
@@ -194,8 +195,8 @@ for image_text in list_file:
     edges = detect_edges(image)
     line_coords = detect_lines(path, edges, path)
 
-    point_1, point_2, point_3 = calculate_line_segments(line_coords)
+    p_1, p_2, p_3 = calculate_line_segments(line_coords)
 
-    angle = cosine_rule(point_1, point_2, point_3)
+    angle = cosine_rule(p_1, p_2, p_3)
 
     print(f"{path}, Calculated: {angle}, Actual: {correct_angle}")
