@@ -2,9 +2,19 @@ import cv2
 import math
 from math import fabs, degrees, acos
 import numpy as np
+import sys
 
 
 def preprocess_image(path):
+    """
+    - Read image in\n
+    - Convert to Grayscale\n
+    - Apply a Gaussian Blur to remove noise
+
+    :param path: path to image
+    :returns: blurred and grayscale image
+    """
+
     # Read the original image
     img = cv2.imread(path)
 
@@ -18,6 +28,12 @@ def preprocess_image(path):
 
 
 def detect_edges(img):
+    """
+    Use Canny Edge Detection to find edges
+    :param img: test
+    :return: edges
+    """
+
     # Canny Edge Detection
     edges = cv2.Canny(image=img, threshold1=50, threshold2=150)
 
@@ -26,7 +42,7 @@ def detect_edges(img):
     return edges
 
 
-def detect_lines(path, edges, i):
+def detect_lines(path, edges, img_name):
     lines = cv2.HoughLinesP(edges, rho=0.991, theta=1 * np.pi / 180, threshold=55, minLineLength=80, maxLineGap=50)
     line_list = []
     img = cv2.imread(path)
@@ -39,7 +55,7 @@ def detect_lines(path, edges, i):
 
         cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 1)  # add line to image for representation
 
-    cv2.imwrite(f'houghlines{i}.jpg', img)
+    # cv2.imwrite(f'houghlines - {img_name}.jpg', img)
     return line_list
 
 
@@ -62,6 +78,10 @@ def calculate_gradients(line_coords):
 
 
 def calculate_line_segments(line_coords):
+    """
+    Taking three points (line_coords) find the average and return three points.\n
+    - The points consist of the intersection and the two ends that do not meet
+    """
     # check which x and y coords are similar
     tolerance = 10
     point_1 = line_coords[0][0]  # guaranteed to be two different points
@@ -77,7 +97,10 @@ def calculate_line_segments(line_coords):
         y_start = line_coords[i][0][1]
         x_end = line_coords[i][1][0]
         y_end = line_coords[i][1][1]
-        # print(x_start, y_start, x_end, y_end)
+
+        ####################################################################
+        ## Condition statements to check which points go with which lines ##
+        ####################################################################
         if fabs(x_start - point_1[0]) < tolerance and fabs(y_start - point_1[1]) < tolerance:  # case - first set of coords with POINT 1
             point_1[0] = (point_1[0] + x_start) / 2
             point_1[1] = (point_1[1] + y_start) / 2
@@ -137,27 +160,42 @@ def calculate_distance(point_1, point_2):
 
 
 def cosine_rule(point_1, point_2, point_3):
+    if not point_3 or not point_1 or not point_2:
+        print(f"Not enough lines to calculate angle, please ensure {path} is correct")
+        return None
     a = calculate_distance(point_1, point_3)
     b = calculate_distance(point_2, point_3)
     c = calculate_distance(point_1, point_2)
 
-    return acos(((a ** 2) + (b ** 2) - (c ** 2))/(2 * a * b))
+    return int(degrees(acos(((a ** 2) + (b ** 2) - (c ** 2))/(2 * a * b))))
 
 
-correct_angles = []
-list_file = open("list.txt", "r")
-for text in list_file:
-    angle_text = text.split(',')[1]
-    correct_angles.append(angle_text.replace('\n', ''))
+def file_name_checks(args):
+    if len(args) == 1:
+        print("Please provide the name of the text file containing image names and angles as an argument.")
+        exit()
+    file_name = sys.argv[1]
+    if not file_name.endswith(".txt"):
+        print("Please provide file as a .txt type")
+        exit()
 
-for i in range(1, 11):
-    path = f"image{i}.png"
+    return file_name
+
+
+file_name = file_name_checks(sys.argv)
+list_file = open(file_name, "r")
+for image_text in list_file:
+    line = image_text.split(',')
+
+    path = line[0]
+    correct_angle = line[1].replace('\n', '')
+
     image = preprocess_image(path)
     edges = detect_edges(image)
-    line_coords = detect_lines(path, edges, i)
+    line_coords = detect_lines(path, edges, path)
 
     point_1, point_2, point_3 = calculate_line_segments(line_coords)
 
-    angle = degrees(cosine_rule(point_1, point_2, point_3))
+    angle = cosine_rule(point_1, point_2, point_3)
 
-    print(f"Image{i}, Calculated: {int(angle)}, Actual: {correct_angles[i - 1]}")
+    print(f"{path}, Calculated: {angle}, Actual: {correct_angle}")
