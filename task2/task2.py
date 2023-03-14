@@ -9,17 +9,19 @@ from typing import Dict, List, Tuple
 
 
 def main() -> None:
-    predict_directory_path: Path = Path("./predict")
-    predict_directory_path.mkdir(parents=True, exist_ok=True)
+    predict_image_directory_path: Path = Path("./predict/images")
+    predict_image_directory_path.mkdir(parents=True, exist_ok=True)
+    predict_label_directory_path: Path = Path("./predict/labels")
+    predict_label_directory_path.mkdir(parents=True, exist_ok=True)
     test_directory_path: Path = Path("./test/images").resolve(strict=True)
     train_directory_path: Path = Path("./train/png").resolve(strict=True)
     icons: Dict[str, np.ndarray] = get_train_icons(train_directory_path)
     for image_path in test_directory_path.glob("*.png"):
         image: np.ndarray = cv2.imread(str(image_path))
-        predict_icon_classes(image, image_path.name, icons, predict_directory_path)
+        predict_icon_classes(image, image_path.name, icons, predict_image_directory_path, predict_label_directory_path)
 
 
-def predict_icon_classes(image: np.ndarray, image_name: str, train_icons: Dict[str, np.ndarray], predict_directory_path: Path) -> str:
+def predict_icon_classes(image: np.ndarray, image_name: str, train_icons: Dict[str, np.ndarray], predict_image_directory_path: Path, predict_label_directory_path: Path) -> str:
     """Predicts icon classes for all icons in the given image."""
     bounding_boxes: List[Tuple[int, float]] = get_bounding_boxes(image, min_contour_area=1500, max_contour_area=100000)
     test_icons: List[np.ndarray] = get_image_icons(image, bounding_boxes)
@@ -32,7 +34,7 @@ def predict_icon_classes(image: np.ndarray, image_name: str, train_icons: Dict[s
         prediction: str = min(icon_errors, key=icon_errors.get)
         label_top, label_bottom = prediction.split("-", maxsplit=1)
         render_bounding_box(image_predict, bounding_box, label_top=label_top, label_bottom=label_bottom)  
-    cv2.imwrite(f"{predict_directory_path}/{image_name}", image_predict)
+    cv2.imwrite(f"{predict_image_directory_path}/{image_name}", image_predict)
 
 
 def get_train_icons(train_directory_path: Path) -> Dict[str, np.ndarray]:
