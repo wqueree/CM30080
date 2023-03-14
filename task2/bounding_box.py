@@ -12,11 +12,11 @@ def get_bounding_boxes_file(image_path: Union[Path, str], min_contour_area: int,
     return get_bounding_boxes(image, min_contour_area, max_contour_area)
 
 
-def get_bounding_boxes(image: np.ndarray, min_contour_area: int, max_contour_area: int) -> List[Tuple[int, float]]:
+def get_bounding_boxes(image: np.ndarray, min_contour_area: int, max_contour_area: int, threshold: int) -> List[Tuple[int, float]]:
     """Gets bounding boxes around icons from an image."""
     bounding_boxes: List[Tuple[int, float]] = list()
     image_greyscale: np.ndarray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    _, image_binary = cv2.threshold(image_greyscale, 240, 255, cv2.THRESH_BINARY)
+    _, image_binary = cv2.threshold(image_greyscale, threshold, 255, cv2.THRESH_BINARY)
     contours, _ = cv2.findContours(image_binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     contour_areas: List[float] = list()
     for i, contour in enumerate(contours):

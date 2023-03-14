@@ -2,10 +2,14 @@ import cv2
 import numpy as np
 
 from bounding_box import get_bounding_boxes, render_bounding_box
-from colors import WHITE
+from colors import BLACK
 from image_compare import compare_rgb
 from pathlib import Path
 from typing import Dict, List, Tuple
+
+
+# TODO Mask background of training images to black
+# TODO Investigate Nyquist Limit
 
 
 def main() -> None:
@@ -20,17 +24,21 @@ def main() -> None:
         image: np.ndarray = cv2.imread(str(image_path))
         predict_icon_classes(image, image_path.name, icons, predict_image_directory_path, predict_label_directory_path)
 
-
 def predict_icon_classes(image: np.ndarray, image_name: str, train_icons: Dict[str, np.ndarray], predict_image_directory_path: Path, predict_label_directory_path: Path) -> str:
     """Predicts icon classes for all icons in the given image."""
-    bounding_boxes: List[Tuple[int, float]] = get_bounding_boxes(image, min_contour_area=1500, max_contour_area=100000)
+    bounding_boxes: List[Tuple[int, float]] = get_bounding_boxes(image, 1500, 300000, 240)
     test_icons: List[np.ndarray] = get_image_icons(image, bounding_boxes)
     image_predict: np.ndarray = np.copy(image)
     for bounding_box, test_icon in zip(bounding_boxes, test_icons):
         icon_errors: Dict[str, float] = dict()
+        cv2.imshow("test_icon", test_icon)
         for class_name, train_icon in train_icons.items():
             scaled_train_icon: np.ndarray = cv2.resize(train_icon, test_icon.shape[1::-1], interpolation=cv2.INTER_AREA)
             icon_errors[class_name] = compare_rgb(scaled_train_icon, test_icon)
+            cv2.imshow("train_icon", train_icon)
+            print(f"{class_name}: {icon_errors[class_name]}")
+            cv2.waitKey(0)
+            cv2.destroyWindow("train_icon")
         prediction: str = min(icon_errors, key=icon_errors.get)
         label_top, label_bottom = prediction.split("-", maxsplit=1)
         render_bounding_box(image_predict, bounding_box, label_top=label_top, label_bottom=label_bottom)  
@@ -41,11 +49,15 @@ def get_train_icons(train_directory_path: Path) -> Dict[str, np.ndarray]:
     """Gets and crops training icons from the given directory."""
     cropped_icons: Dict[str, np.ndarray] = dict()
     for icon_path in train_directory_path.glob("*.png"):
-        # Read icon and pad with 1px white border
-        icon: np.ndarray = cv2.imread(str(icon_path))
-        icon = cv2.copyMakeBorder(icon, 1, 1, 1, 1, cv2.BORDER_CONSTANT, None, WHITE)
+        # Read icon and pad with a 1px black border
+        icon_bgra: np.ndarray = cv2.imread(str(icon_path), cv2.IMREAD_UNCHANGED)
+        alpha = icon_bgra[:, :, 3]
+        alpha_mask = cv2.cvtColor(alpha, cv2.COLOR_GRAY2BGR)
+        icon_bgr = cv2.cvtColor(icon_bgra, cv2.COLOR_BGRA2BGR)
+        icon: np.ndarray = cv2.bitwise_and(icon_bgr, alpha_mask)
+        icon = cv2.copyMakeBorder(icon, 1, 1, 1, 1, cv2.BORDER_CONSTANT, None, BLACK)
         # Crop icons
-        x, y, w, h = get_bounding_boxes(icon, min_contour_area=100000, max_contour_area=275000)[0]
+        x, y, w, h = get_bounding_boxes(icon, 60000, 275000, 20)[0]
         icon_crop: np.ndarray = icon[y:y + h, x:x + w]
         cropped_icons[icon_path.stem] = icon_crop
     return cropped_icons
