@@ -23,22 +23,18 @@ def compare_grayscale_file(image_path_1: Union[Path, str], image_path_2: Union[P
 def compare_rgb(image_1: np.ndarray, image_2: np.ndarray) -> float:
     """Returns the mean squared error of two rgb images across all channels."""
     error: float = 0.0
-
     # Calculate Blue Channel MSE
     blue_1: np.ndarray = image_1[:, :, 0]
     blue_2: np.ndarray = image_2[:, :, 0]
     error += mse(blue_1, blue_2)
-
     # Calculate Green Channel MSE
     green_1: np.ndarray = image_1[:, :, 1]
     green_2: np.ndarray = image_2[:, :, 1]
     error += mse(green_1, green_2)
-
     # Calculate Red Channel MSE
     red_1: np.ndarray = image_1[:, :, 2]
     red_2: np.ndarray = image_2[:, :, 2]
     error += mse(red_1, red_2)
-
     return error
 
 
