@@ -19,16 +19,16 @@ def main() -> None:
         predict_icon_classes(image, image_path.name, icons, predict_directory_path)
 
 
-def predict_icon_classes(image: np.ndarray, image_name: str, icons: Dict[str, np.ndarray], predict_directory_path: Path) -> str:
+def predict_icon_classes(image: np.ndarray, image_name: str, train_icons: Dict[str, np.ndarray], predict_directory_path: Path) -> str:
     """Predicts icon classes for all icons in the given image."""
     bounding_boxes: List[Tuple[int, float]] = get_bounding_boxes(image, min_contour_area=1500, max_contour_area=100000)
-    image_icons: List[np.ndarray] = get_image_icons(image, bounding_boxes)
+    test_icons: List[np.ndarray] = get_image_icons(image, bounding_boxes)
     image_predict: np.ndarray = np.copy(image)
-    for bounding_box, image_icon in zip(bounding_boxes, image_icons):
+    for bounding_box, test_icon in zip(bounding_boxes, test_icons):
         icon_errors: Dict[str, float] = dict()
-        for class_name, icon in icons.items():
-            scaled_icon: np.ndarray = cv2.resize(icon, image_icon.shape[1::-1], interpolation=cv2.INTER_AREA)
-            icon_errors[class_name] = compare_rgb(scaled_icon, image_icon)
+        for class_name, train_icon in train_icons.items():
+            scaled_train_icon: np.ndarray = cv2.resize(train_icon, test_icon.shape[1::-1], interpolation=cv2.INTER_AREA)
+            icon_errors[class_name] = compare_rgb(scaled_train_icon, test_icon)
         prediction: str = min(icon_errors, key=icon_errors.get)
         label_top, label_bottom = prediction.split("-", maxsplit=1)
         render_bounding_box(image_predict, bounding_box, label_top=label_top, label_bottom=label_bottom)  
