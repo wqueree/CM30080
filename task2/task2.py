@@ -1,34 +1,36 @@
-from image_compare import compare_rgb, compare_rgb_file, compare_grayscale, compare_grayscale_file
 import cv2
 import numpy as np
 
+from bounding_box import get_bounding_boxes, get_bounding_boxes_file, render_bounding_boxes
+from image_compare import compare_rgb, compare_rgb_file, compare_grayscale, compare_grayscale_file
+from pathlib import Path
+from typing import Dict, List, Tuple
+
+
 def main() -> None:
-    image_1_path = "C:\\Users\\wquer\\GitHub\\Personal\\CM30080\\task2\\test\\images\\test_image_1.png"
-    image_1 = cv2.imread(image_1_path)
-    image_1_copy = np.copy(image_1)
+    test_directory_path: Path = Path("./test/images").resolve(strict=True)
+    train_directory_path: Path = Path("./train/png").resolve(strict=True)
+    
+    for image_path in test_directory_path.glob("*.png"):
+        image: np.ndarray = cv2.imread(str(image_path))
+        predict_icon_classes(image, train_directory_path)
 
-    image_1_grey = cv2.cvtColor(image_1, cv2.COLOR_BGR2GRAY)
-    _, image_1_240 = cv2.threshold(image_1_grey, 240, 255, cv2.THRESH_BINARY)
-    contours, hierarchy = cv2.findContours(image_1_240, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    contour_areas = [0] * len(contours)
 
-    for i, contour in enumerate(contours):
-        contour_area = cv2.contourArea(contour)
+def predict_icon_classes(image: np.ndarray, train_directory_path: Path) -> str:
+    bounding_boxes: List[Tuple[int, float]] = get_bounding_boxes(image)
+    for bounding_box in bounding_boxes:
+        # TODO Crop images using bboxes
+        icon_errors: Dict[str, float] = dict()
+        for icon_path in train_directory_path.glob("*.png"):
+            icon = cv2.imread(str(icon_path))
+            # TODO Mask away background
+            # TODO Do comparison
 
-        if 20 < contour_area < 100000:
-            x, y, w, h = cv2.boundingRect(contour)
-            cv2.rectangle(image_1, (x, y), (x + w, y + h), (0, 0, 255), 1)
-
-    cv2.imshow("image_1", image_1)
-    cv2.imshow("image_1_grey", image_1_grey)
-    cv2.imshow("image_1_240", image_1_240)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-    # TODO Crop images using bboxes
-    # TODO Mask away background
-    # TODO Do comparison
-
+    # cv2.imshow("image", image)
+    # render_bounding_boxes(image, bounding_boxes)
+    # cv2.imshow("bounding_boxes", image)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     main()
