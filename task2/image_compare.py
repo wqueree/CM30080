@@ -3,11 +3,13 @@ import numpy as np
 from pathlib import Path
 from typing import Union
 
+
 def compare_rgb_file(image_path_1: Union[Path, str], image_path_2: Union[Path, str]) -> float:
     """Returns the mean squared error of two rgb image paths across all channels."""
     image_1 = cv2.imread(str(image_path_1))
     image_2 = cv2.imread(str(image_path_2))
     return compare_rgb(image_1, image_2)
+
 
 def compare_grayscale_file(image_path_1: Union[Path, str], image_path_2: Union[Path, str]) -> float:
     """Returns the mean squared error of two rgb image paths which are then converted to a single grayscale channel."""
@@ -16,6 +18,7 @@ def compare_grayscale_file(image_path_1: Union[Path, str], image_path_2: Union[P
     image_1 = cv2.cvtColor(image_1, cv2.COLOR_BGR2GRAY)
     image_2 = cv2.cvtColor(image_2, cv2.COLOR_BGR2GRAY)
     return compare_grayscale(image_1, image_2)
+
 
 def compare_rgb(image_1: np.ndarray, image_2: np.ndarray) -> float:
     """Returns the mean squared error of two rgb images across all channels."""
@@ -38,9 +41,11 @@ def compare_rgb(image_1: np.ndarray, image_2: np.ndarray) -> float:
 
     return error
 
+
 def compare_grayscale(image_1: np.ndarray, image_2: np.ndarray) -> float:
     """Returns the mean squared error of two rgb images which are then converted to a single grayscale channel."""
     return mse(image_1, image_2)
+
 
 def mse(channel_1: np.ndarray, channel_2: np.ndarray) -> float:
     """Returns the mean squared error between two image channels."""

@@ -20,6 +20,7 @@ def main() -> None:
 
 
 def predict_icon_classes(image: np.ndarray, image_name: str, icons: Dict[str, np.ndarray], predict_directory_path: Path) -> str:
+    """Predicts icon classes for all icons in the given image."""
     bounding_boxes: List[Tuple[int, float]] = get_bounding_boxes(image, min_contour_area=1500, max_contour_area=100000)
     image_icons: List[np.ndarray] = get_image_icons(image, bounding_boxes)
     image_predict: np.ndarray = np.copy(image)
@@ -35,6 +36,7 @@ def predict_icon_classes(image: np.ndarray, image_name: str, icons: Dict[str, np
 
 
 def get_train_icons(train_directory_path: Path) -> Dict[str, np.ndarray]:
+    """Gets and crops training icons from the given directory."""
     cropped_icons: Dict[str, np.ndarray] = dict()
     for icon_path in train_directory_path.glob("*.png"):
         # Read icon and pad with 1px white border
@@ -48,7 +50,8 @@ def get_train_icons(train_directory_path: Path) -> Dict[str, np.ndarray]:
 
 
 def get_image_icons(image: np.ndarray, bounding_boxes: List[Tuple[int, float]]):
-    cropped_icons: Dict[str, np.ndarray] = list()
+    """Gets and crops icons from the given image by the provided bounding boxes."""
+    cropped_icons: List[np.ndarray] = list()
     for x, y, w, h in bounding_boxes:
         icon_crop: np.ndarray = image[y:y + h, x:x + w]
         cropped_icons.append(icon_crop)
