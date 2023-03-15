@@ -1,8 +1,8 @@
-import cv2
-import numpy as np
-
 from pathlib import Path
 from typing import Union
+
+import cv2
+import numpy as np
 
 
 def compare_rgb_file(image_path_1: Union[Path, str], image_path_2: Union[Path, str]) -> float:

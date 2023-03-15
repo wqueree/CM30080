@@ -1,14 +1,14 @@
-import cv2
-import numpy as np
-
-from bounding_box import get_bounding_boxes, render_bounding_box
-from colors import BLACK
-from image_compare import compare_rgb
 from pathlib import Path
-from tqdm import tqdm
 from typing import Dict, List, Tuple
 
+import cv2
+import numpy as np
+from bounding_box import get_bounding_boxes, render_bounding_box
+from color import BLACK
+from image_compare import compare_rgb
+from tqdm import tqdm
 
+# TODO Integrate template into task2
 # TODO Investigate Nyquist Limit
 
 

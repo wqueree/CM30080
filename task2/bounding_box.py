@@ -1,9 +1,9 @@
+from pathlib import Path
+from typing import List, Tuple, Union
+
 import cv2
 import numpy as np
-
-from colors import RED
-from pathlib import Path
-from typing import List, Union, Tuple
+from color import RED
 
 
 def get_bounding_boxes_file(image_path: Union[Path, str], min_contour_area: int, max_contour_area: int) -> List[Tuple[int, float]]:
