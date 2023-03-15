@@ -19,7 +19,7 @@ def get_bounding_boxes(image: np.ndarray, min_contour_area: int, max_contour_are
     _, image_binary = cv2.threshold(image_greyscale, threshold, 255, cv2.THRESH_BINARY)
     contours, _ = cv2.findContours(image_binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     contour_areas: List[float] = list()
-    for i, contour in enumerate(contours):
+    for contour in contours:
         contour_area: float = cv2.contourArea(contour)
         if min_contour_area < contour_area < max_contour_area:
             bounding_boxes.append(cv2.boundingRect(contour))

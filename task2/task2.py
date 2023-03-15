@@ -9,7 +9,6 @@ from tqdm import tqdm
 from typing import Dict, List, Tuple
 
 
-# TODO Mask background of training images to black
 # TODO Investigate Nyquist Limit
 
 
@@ -21,12 +20,8 @@ def main() -> None:
     test_directory_path: Path = Path("./test/images").resolve(strict=True)
     train_directory_path: Path = Path("./train/png").resolve(strict=True)
     icons: Dict[str, np.ndarray] = get_train_icons(train_directory_path)
-    cv2.imshow("sign", icons["043-sign"])
-    cv2.waitKey()
-    cv2.destroyAllWindows()
     images: List[str, np.ndarray] = get_test_images(test_directory_path)
     for image, image_masked, image_name in tqdm(images):
-        # if image_name == "test_image_11.png":
         predict_icon_classes(image_masked, image, image_name, icons, predict_image_directory_path, predict_label_directory_path)
 
 
@@ -51,7 +46,7 @@ def predict_icon_classes(image_masked: np.ndarray, image_predict: np.ndarray, im
     cv2.imwrite(f"{predict_image_directory_path}/{image_name}", image_predict)
 
 
-def get_train_icons(train_directory_path: Path) -> Dict[str, np.ndarray]:
+def get_train_icons(train_directory_path: Path) -> Dict[str, Dict[int, Dict[int, np.ndarray]]]: # Filename -> Rotation -> Sampling Level
     """Gets and crops training icons from the given directory."""
     cropped_icons: Dict[str, np.ndarray] = dict()
     for icon_path in train_directory_path.glob("*.png"):
