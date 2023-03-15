@@ -47,5 +47,5 @@ def mse(channel_1: np.ndarray, channel_2: np.ndarray) -> float:
     """Returns the mean squared error between two image channels."""
     image_height, image_width = channel_1.shape
     difference = cv2.subtract(channel_1, channel_2)
-    error = np.sum(difference ** 2) / float(image_height * image_width)
+    error = np.sum(difference ** 2)
     return error
