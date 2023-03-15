@@ -6,7 +6,11 @@ from colors import WHITE
 from typing import Dict, Tuple
 
 
-def generate_templates(icon: np.ndarray, theta_interval: int) -> Dict[int, Dict[int, np.ndarray]]:
+# TODO Mask backgound to black for each rotation
+# TODO Create sampling levels for each masked rotation
+
+
+def generate_rotations(icon: np.ndarray, theta_interval: int) -> Dict[int, np.ndarray]:
     if 360 % theta_interval != 0:
         raise ValueError(f"Angle {theta_interval} degrees is not divisible by 360.")
     
@@ -21,7 +25,7 @@ def generate_templates(icon: np.ndarray, theta_interval: int) -> Dict[int, Dict[
 
     # Compute Rotations
     icon_center: Tuple[int] = (icon_width // 2, icon_height // 2)
-    rotations: Dict[int, Dict[int, np.ndarray]] = dict()
+    rotations: Dict[int, np.ndarray] = dict()
     rotations[0] = icon
     previous_rotation: np.ndarray = icon
     rotation_matrix: np.ndarray = cv2.getRotationMatrix2D(icon_center, theta_interval, 1.0)
