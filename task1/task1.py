@@ -3,9 +3,18 @@ import math
 from math import fabs, degrees, acos
 import numpy as np
 import sys
+import time
 
 
-def preprocess_image(img_path):
+def time_convert(sec):
+    mins = sec // 60
+    sec = sec % 60
+    hours = mins // 60
+    mins = mins % 60
+    print("Time Lapsed = {0}:{1}:{2}".format(int(hours), int(mins), sec))
+
+
+def preprocess_image(img_path: str):
     """
     - Read image in\n
     - Convert to Grayscale\n
@@ -33,7 +42,6 @@ def detect_edges(img):
     :param img: test
     :return: edges
     """
-
     # Canny Edge Detection
     edges = cv2.Canny(image=img, threshold1=50, threshold2=150)
 
@@ -42,7 +50,7 @@ def detect_edges(img):
     return edges
 
 
-def detect_lines(path, edges, img_name):
+def detect_lines(path: str, edges: np.array, img_name: str):
     lines = cv2.HoughLinesP(edges, rho=0.991, theta=1 * np.pi / 180, threshold=55, minLineLength=80, maxLineGap=50)
     line_list = []
     img = cv2.imread(path)
@@ -59,7 +67,7 @@ def detect_lines(path, edges, img_name):
     return line_list
 
 
-def calculate_gradients(line_coords):
+def calculate_gradients(line_coords: list):
     tolerance = 0.5
     m_1 = None
     m_2 = None
@@ -77,7 +85,7 @@ def calculate_gradients(line_coords):
     return m_1, m_2
 
 
-def calculate_line_segments(line_coords):
+def calculate_line_segments(line_coords: list):
     """
     Taking three points (line_coords) find the average and return three points.\n
     - The points consist of where the lines intersect and the two ends that do not meet
@@ -98,25 +106,29 @@ def calculate_line_segments(line_coords):
         x_end = line_coords[i][1][0]
         y_end = line_coords[i][1][1]
 
-        ####################################################################
-        ## Condition statements to check which points go with which lines ##
-        ####################################################################
-        if fabs(x_start - point_1[0]) < tolerance and fabs(y_start - point_1[1]) < tolerance:  # case - first set of coords with POINT 1
+        #######################################################################
+        ## Condition statements to check which points refer with which lines ##
+        #######################################################################
+        if fabs(x_start - point_1[0]) < tolerance and fabs(
+                y_start - point_1[1]) < tolerance:  # case - first set of coords with POINT 1
             point_1[0] = (point_1[0] + x_start) / 2
             point_1[1] = (point_1[1] + y_start) / 2
             start = True
             counter_1 += 1
-        if fabs(x_end - point_1[0]) < tolerance and fabs(y_end - point_1[1]) < tolerance:  # case - second set of coords with POINT 1
+        if fabs(x_end - point_1[0]) < tolerance and fabs(
+                y_end - point_1[1]) < tolerance:  # case - second set of coords with POINT 1
             point_1[0] = (point_1[0] + x_end) / 2
             point_1[1] = (point_1[1] + y_end) / 2
             end = True
             counter_1 += 1
-        if fabs(x_start - point_2[0]) < tolerance and fabs(y_start - point_2[1]) < tolerance:  # case - first set of coords with POINT 2
+        if fabs(x_start - point_2[0]) < tolerance and fabs(
+                y_start - point_2[1]) < tolerance:  # case - first set of coords with POINT 2
             point_2[0] = (point_2[0] + x_start) / 2
             point_2[1] = (point_2[1] + y_start) / 2
             start = True
             counter_2 += 1
-        if fabs(x_end - point_2[0]) < tolerance and fabs(y_end - point_2[1]) < tolerance:  # case - second set of coords with POINT 2
+        if fabs(x_end - point_2[0]) < tolerance and fabs(
+                y_end - point_2[1]) < tolerance:  # case - second set of coords with POINT 2
             point_2[0] = (point_2[0] + x_end) / 2
             point_2[1] = (point_2[1] + y_end) / 2
             end = True
@@ -140,6 +152,7 @@ def calculate_line_segments(line_coords):
                 counter_3 += 1
         start = False
         end = False
+
     max_count = max(counter_1, counter_2, counter_3)
     if counter_1 == max_count:
         temp = point_3
@@ -167,7 +180,7 @@ def cosine_rule(point_1, point_2, point_3):
     b = calculate_distance(point_2, point_3)
     c = calculate_distance(point_1, point_2)
 
-    return int(degrees(acos(((a ** 2) + (b ** 2) - (c ** 2))/(2 * a * b))))
+    return int(degrees(acos(((a ** 2) + (b ** 2) - (c ** 2)) / (2 * a * b))))
 
 
 # Function to apply necessary checks on image list file
@@ -183,8 +196,12 @@ def file_name_checks(args):
     return file
 
 
-file_name = file_name_checks(sys.argv)
+# file_name = file_name_checks(sys.argv)
+file_name = "list.txt"
 list_file = open(file_name, "r")
+
+start_time = time.time()
+
 for image_text in list_file:
     line = image_text.split(',')
 
@@ -200,3 +217,7 @@ for image_text in list_file:
     angle = cosine_rule(p_1, p_2, p_3)
 
     print(f"{path}, Calculated: {angle}, Actual: {correct_angle}")
+
+end_time = time.time()
+time_lapsed = end_time - start_time
+print(time_lapsed)
