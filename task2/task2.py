@@ -6,6 +6,7 @@ import numpy as np
 from bounding_box import get_bounding_boxes, render_bounding_box
 from color import BLACK
 from image_compare import compare_rgb
+from template import generate_templates
 from tqdm import tqdm
 
 # TODO Integrate template into task2
@@ -19,20 +20,20 @@ def main() -> None:
     predict_label_directory_path.mkdir(parents=True, exist_ok=True)
     test_directory_path: Path = Path("./test/images").resolve(strict=True)
     train_directory_path: Path = Path("./train/png").resolve(strict=True)
-    icons: Dict[str, np.ndarray] = get_train_icons(train_directory_path)
+    templates: Dict[str, Dict[int, Dict[int, np.ndarray]]] = get_templates(train_directory_path)
     images: List[str, np.ndarray] = get_test_images(test_directory_path)
     for image, image_masked, image_name in tqdm(images):
-        predict_icon_classes(image_masked, image, image_name, icons, predict_image_directory_path, predict_label_directory_path)
+        predict_icon_classes(image_masked, image, image_name, templates, predict_image_directory_path, predict_label_directory_path)
 
 
-def predict_icon_classes(image_masked: np.ndarray, image_predict: np.ndarray, image_name: str, train_icons: Dict[str, np.ndarray], predict_image_directory_path: Path, predict_label_directory_path: Path) -> str:
+def predict_icon_classes(image_masked: np.ndarray, image_predict: np.ndarray, image_name: str, templates: Dict[str, np.ndarray], predict_image_directory_path: Path, predict_label_directory_path: Path) -> str:
     """Predicts icon classes for all icons in the given image."""
     bounding_boxes: List[Tuple[int, float]] = get_bounding_boxes(image_masked, 1500, 250000, 15)
     test_icons: List[np.ndarray] = get_image_icons(image_masked, bounding_boxes)
     for bounding_box, test_icon in zip(bounding_boxes, test_icons):
         icon_errors: Dict[str, float] = dict()
         cv2.imshow("test_icon", test_icon)
-        for class_name, train_icon in train_icons.items():
+        for i, (class_name, train_icon) in enumerate(templates.items()):
             scaled_train_icon: np.ndarray = cv2.resize(train_icon, test_icon.shape[1::-1], interpolation=cv2.INTER_AREA)
             mse: float = compare_rgb(scaled_train_icon, test_icon)
             print(f"{class_name} mse: {mse}")
@@ -46,22 +47,17 @@ def predict_icon_classes(image_masked: np.ndarray, image_predict: np.ndarray, im
     cv2.imwrite(f"{predict_image_directory_path}/{image_name}", image_predict)
 
 
-def get_train_icons(train_directory_path: Path) -> Dict[str, Dict[int, Dict[int, np.ndarray]]]: # Filename -> Rotation -> Sampling Level
+def get_templates(train_directory_path: Path) -> Dict[str, Dict[int, Dict[int, np.ndarray]]]: # Filename -> Rotation -> Sampling Level
     """Gets and crops training icons from the given directory."""
-    cropped_icons: Dict[str, np.ndarray] = dict()
+    icon_templates: Dict[str, Dict[int, Dict[int, np.ndarray]]] = dict()
     for icon_path in train_directory_path.glob("*.png"):
-        # Read icon and pad with a 1px black border
         icon_bgra: np.ndarray = cv2.imread(str(icon_path), cv2.IMREAD_UNCHANGED)
-        alpha = icon_bgra[:, :, 3]
-        alpha_mask = cv2.cvtColor(alpha, cv2.COLOR_GRAY2BGR)
-        icon_bgr = cv2.cvtColor(icon_bgra, cv2.COLOR_BGRA2BGR)
-        icon: np.ndarray = cv2.bitwise_and(icon_bgr, alpha_mask)
-        icon = cv2.copyMakeBorder(icon, 1, 1, 1, 1, cv2.BORDER_CONSTANT, None, BLACK)
+        icon_templates[icon_path.stem] = generate_templates(icon_bgra, 15, 12, 5, 5)
         # Crop icons
-        x, y, w, h = get_bounding_boxes(icon, 60000, 275000, 15)[0]
-        icon_crop: np.ndarray = icon[y:y + h, x:x + w]
-        cropped_icons[icon_path.stem] = icon_crop
-    return cropped_icons
+        # x, y, w, h = get_bounding_boxes(icon, 60000, 275000, 15)[0]
+        # icon_crop: np.ndarray = icon[y:y + h, x:x + w]
+        # cropped_icons[icon_path.stem] = icon_crop
+    return icon_templates
 
 
 def get_test_images(test_directory_path: Path) -> List[Tuple[str, np.ndarray]]:

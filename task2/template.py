@@ -6,24 +6,24 @@ import numpy as np
 from color import BLACK, WHITE
 
 
-def generate_templates(icon: np.ndarray, theta_interval: int, smapling_levels: int, kernel_size: int) -> Dict[int, Dict[int, np.ndarray]]:
+def generate_templates(icon: np.ndarray, theta_interval: int, sampling_levels: int, sampling_interval: int, kernel_size: int) -> Dict[int, Dict[int, np.ndarray]]:
     if icon.shape[2] != 4:
         raise ValueError("Image must be in BGRA format. Use cv2.IMREAD_UNCHANGED for PNG images.")
     icon_padded = pad_icon(icon, WHITE)
-    rotations_masked: Dict[int, np.ndarray] = generate_masked_rotations(icon_padded, 10)
+    rotations_masked: Dict[int, np.ndarray] = generate_masked_rotations(icon_padded, theta_interval)
     templates: Dict[int, Dict[int, np.ndarray]] = dict()
     for angle, rotation in rotations_masked.items():
-        templates[angle] = generate_gaussian_pyramid(rotation, 5)
+        templates[angle] = generate_gaussian_pyramid(rotation, 5, 5, 5)
     return templates
 
 
-def generate_gaussian_pyramid(icon: np.ndarray, levels: int, kernel_size: int) -> Dict[int, np.ndarray]:
-    cv2.imshow("original", icon)
+def generate_gaussian_pyramid(icon: np.ndarray, sampling_levels: int, sampling_interval: int, kernel_size: int) -> Dict[int, np.ndarray]:
     gaussian_pyramid: Dict[int, np.ndarray] = dict()
     gaussian_pyramid[0] = icon
-    for i in range(1, levels):
-        icon_blur = cv2.GaussianBlur(icon, (kernel_size, kernel_size), 0)
-        icon = icon_blur[::2, 1::2]
+    for i in range(1, sampling_levels):
+        icon = cv2.GaussianBlur(icon, (kernel_size, kernel_size), 0)
+        icon = np.delete(icon, list(range(0, icon.shape[0], sampling_interval)), axis=0)
+        icon = np.delete(icon, list(range(0, icon.shape[1], sampling_interval)), axis=1)
         gaussian_pyramid[i] = icon
     return gaussian_pyramid
 
