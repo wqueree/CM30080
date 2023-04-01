@@ -4,6 +4,7 @@ from math import fabs, degrees, acos
 import numpy as np
 import sys
 import time
+from sklearn.metrics import mean_squared_error
 
 
 def time_convert(sec):
@@ -95,16 +96,15 @@ def calculate_line_segments(line_coords: list):
     point_1 = line_coords[0][0]  # guaranteed to be two different points
     point_2 = line_coords[0][1]
     point_3 = None
-    start = False
-    end = False
-    counter_1 = 0
-    counter_2 = 0
-    counter_3 = 0
+    counters = [0, 0, 0]
+
     for i in range(1, len(line_coords)):
         x_start = line_coords[i][0][0]
         y_start = line_coords[i][0][1]
         x_end = line_coords[i][1][0]
         y_end = line_coords[i][1][1]
+
+        start = end = False
 
         #######################################################################
         ## Condition statements to check which points refer with which lines ##
@@ -114,25 +114,28 @@ def calculate_line_segments(line_coords: list):
             point_1[0] = (point_1[0] + x_start) / 2
             point_1[1] = (point_1[1] + y_start) / 2
             start = True
-            counter_1 += 1
+            counters[0] += 1
+
         if fabs(x_end - point_1[0]) < tolerance and fabs(
                 y_end - point_1[1]) < tolerance:  # case - second set of coords with POINT 1
             point_1[0] = (point_1[0] + x_end) / 2
             point_1[1] = (point_1[1] + y_end) / 2
             end = True
-            counter_1 += 1
+            counters[0] += 1
+
         if fabs(x_start - point_2[0]) < tolerance and fabs(
                 y_start - point_2[1]) < tolerance:  # case - first set of coords with POINT 2
             point_2[0] = (point_2[0] + x_start) / 2
             point_2[1] = (point_2[1] + y_start) / 2
             start = True
-            counter_2 += 1
+            counters[1] += 1
+
         if fabs(x_end - point_2[0]) < tolerance and fabs(
                 y_end - point_2[1]) < tolerance:  # case - second set of coords with POINT 2
             point_2[0] = (point_2[0] + x_end) / 2
             point_2[1] = (point_2[1] + y_end) / 2
             end = True
-            counter_2 += 1
+            counters[1] += 1
 
         if not point_3:  # check if point_3 has been allocated
             if start and end:
@@ -145,23 +148,22 @@ def calculate_line_segments(line_coords: list):
             if fabs(x_start - point_3[0]) < tolerance:  # case - first set of coords with POINT 2
                 point_3[0] = (point_3[0] + x_start) / 2
                 point_3[1] = (point_3[1] + y_start) / 2
-                counter_3 += 1
+                counters[2] += 1
             elif fabs(x_end - point_3[0]) < tolerance:  # case - second set of coords with POINT 2
                 point_3[0] = (point_3[0] + x_end) / 2
                 point_3[1] = (point_3[1] + y_end) / 2
-                counter_3 += 1
-        start = False
-        end = False
+                counters[2] += 1
 
-    max_count = max(counter_1, counter_2, counter_3)
-    if counter_1 == max_count:
+    max_count = max(counters)
+    if counters[0] == max_count:
         temp = point_3
         point_3 = point_1
         point_1 = temp
-    elif counter_2 == max_count:
+    elif counters[1] == max_count:
         temp = point_3
         point_3 = point_2
         point_2 = temp
+
     return point_1, point_2, point_3
 
 
@@ -180,7 +182,7 @@ def cosine_rule(point_1, point_2, point_3):
     b = calculate_distance(point_2, point_3)
     c = calculate_distance(point_1, point_2)
 
-    return int(degrees(acos(((a ** 2) + (b ** 2) - (c ** 2)) / (2 * a * b))))
+    return degrees(acos(((a ** 2) + (b ** 2) - (c ** 2)) / (2 * a * b)))
 
 
 # Function to apply necessary checks on image list file
@@ -202,6 +204,9 @@ list_file = open(file_name, "r")
 
 start_time = time.time()
 
+predicted_accuracy = []
+real_accuracy = []
+
 for image_text in list_file:
     line = image_text.split(',')
 
@@ -216,8 +221,12 @@ for image_text in list_file:
 
     angle = cosine_rule(p_1, p_2, p_3)
 
+    predicted_accuracy.append(angle)
+    real_accuracy.append(int(correct_angle))
+
     print(f"{path}, Calculated: {angle}, Actual: {correct_angle}")
 
+print(mean_squared_error(real_accuracy, predicted_accuracy))
 end_time = time.time()
 time_lapsed = end_time - start_time
-print(time_lapsed)
+# print(time_lapsed)
