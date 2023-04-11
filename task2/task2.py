@@ -69,26 +69,6 @@ def predict_icon_classes(image_masked: np.ndarray, image_predict: np.ndarray, im
     write_annotation_file(predict_annotation_directory_path, image_name, bounding_boxes)
     cv.imwrite(f"{predict_image_directory_path}/{image_name}", image_predict)
 
-def predict_icon_classes_old(image_masked: np.ndarray, image_predict: np.ndarray, image_name: str, templates: Dict[str, np.ndarray], predict_image_directory_path: Path, predict_label_directory_path: Path) -> str:
-    """Predicts icon classes for all icons in the given image."""
-    bounding_boxes: List[Tuple[int, float]] = get_bounding_boxes(image_masked, 1500, 250000, 15)
-    test_icons: List[np.ndarray] = get_image_icons(image_masked, bounding_boxes)
-    for bounding_box, test_icon in zip(bounding_boxes, test_icons):
-        icon_errors: Dict[str, float] = dict()
-        cv.imshow("test_icon", test_icon)
-        for i, (class_name, train_icon) in enumerate(templates.items()):
-            scaled_train_icon: np.ndarray = cv.resize(train_icon, test_icon.shape[1::-1], interpolation=cv.INTER_AREA)
-            mse: float = compare_rgb(scaled_train_icon, test_icon)
-            print(f"{class_name} mse: {mse}")
-            cv.imshow("train_icon", scaled_train_icon)
-            cv.waitKey()
-            cv.destroyWindow("train_icon")
-            icon_errors[class_name] = mse
-        prediction: str = min(icon_errors, key=icon_errors.get)
-        label_top, label_bottom = prediction.split("-", maxsplit=1)
-        render_bounding_box(image_predict, bounding_box, label_top=label_top, label_bottom=label_bottom)  
-    cv.imwrite(f"{predict_image_directory_path}/{image_name}", image_predict)
-
 
 def write_annotation_file(predict_annotation_directory_path: Path, image_name: str, bounding_boxes: Set[Tuple[int, int, int, int, str, str, float]]) -> None:
     """Writes the given bounding boxes to an annotation file."""
