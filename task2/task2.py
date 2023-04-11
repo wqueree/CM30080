@@ -9,11 +9,10 @@ from image_compare import compare_rgb
 from template import generate_templates, mask_icon, generate_gaussian_pyramid, zero_mean_match_template, ssd_match_template
 from tqdm import tqdm
 
-# TODO Implement zero mean template
+THRESHOLD: int = 165000
+
 # TODO Implement intensity normalization
 # TODO Implement normalized cross correlation
-# TODO Implement template matching
-# TODO Integrate template into task2
 # TODO Investigate Nyquist Limit
 
 
@@ -52,7 +51,7 @@ def predict_icon_classes(image_masked: np.ndarray, image_predict: np.ndarray, im
         template = sampling_levels[3]
         if template.shape[0] < image_masked.shape[0] and template.shape[1] < image_masked.shape[1]:
             match_map, pred_value, pred_centre = ssd_match_template(image_masked, template)
-            if pred_value < 160000:
+            if pred_value < THRESHOLD:
                 label_top, label_bottom = class_name.split("-", maxsplit=1)
                 bounding_box_origin: Tuple[int, int] = (pred_centre[0] - 31, pred_centre[1] - 31)
                 current_bounding_box: Tuple[int, int, int, int, str, str, float] = (
