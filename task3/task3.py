@@ -1,38 +1,53 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from os import listdir
+from os.path import isfile, join
+from segmentation import get_icon_boxes
 
-train_image = cv2.imread("./train_images/011-trash.png")
 
-train_image = cv2.cvtColor(train_image, cv2.COLOR_BGR2RGB)
+def get_dir_images(path):
+    onlyfiles = [path + f for f in listdir(path) if isfile(join(path, f))]
+    return onlyfiles
 
-fig = plt.figure(figsize=(12, 12))
-ax = fig.add_subplot(111)
-ax.imshow(train_image)
 
-test_image = cv2.imread("./TestWithoutRotations/images/test_image_1.png")
+train_image_folder = "./train_images/"
+train_image_paths = get_dir_images(train_image_folder)
+test_image_folder = "./TestWithoutRotations/images/"
+test_image_paths = get_dir_images(test_image_folder)
 
-fig = plt.figure(figsize=(15, 15))
-ax = fig.add_subplot(111)
-ax.imshow(test_image)
 
-orb = cv2.SIFT_create()
+def image_detect_and_compute(image, resize_val):
+    image = cv2.imread(image, None)
+    sift = cv2.SIFT_create()
+    if resize_val > 0:
+        image = cv2.resize(image, (resize_val, resize_val), interpolation=cv2.INTER_LINEAR)
+    kp, desc = sift.detectAndCompute(image, None)
+    return kp, desc
 
-kp1, des1 = orb.detectAndCompute(train_image, None)
-kp2, des2 = orb.detectAndCompute(test_image, None)
 
-bf = cv2.BFMatcher()
-matches = bf.knnMatch(des1, des2, k=2)
+train_kp_desc = []
+for image in train_image_paths:
+    kp, desc = image_detect_and_compute(image, 0)
+    train_kp_desc.append((image.strip(".png").strip("/train_images/"), kp, desc))
 
-good = []
+# print(train_kp_desc)
 
-for m, n in matches:
-    if m.distance < 0.75 * n.distance:
-        good.append([m])
+icon_coords = []
+for image in test_image_paths:
+    icon_coords.append(get_icon_boxes(image))
 
-img3 = cv2.drawMatchesKnn(train_image, kp1, test_image, kp2, good[:100], None, flags=2)
+print(icon_coords)
 
-fig = plt.figure(figsize=(15, 15))
-ax = fig.add_subplot(111)
-ax.imshow(img3)
-plt.show()
+"""
+TODO:
+ - get test image features
+    - take each icon using bounding box coordinates
+    - apply SIFT detect and compute
+ - match segments
+    - bruteforcer with knnMatch
+    - filter any poor matches
+    - apply RANSAC
+        - homography matrix
+        - inliers
+"""
