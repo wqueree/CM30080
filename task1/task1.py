@@ -5,6 +5,7 @@ import numpy as np
 import sys
 import time
 from sklearn.metrics import mean_squared_error
+from hyperopt import tpe, hp, fmin, STATUS_OK, Trials
 
 
 def time_convert(sec):
@@ -15,46 +16,52 @@ def time_convert(sec):
     print("Time Lapsed = {0}:{1}:{2}".format(int(hours), int(mins), sec))
 
 
-def preprocess_image(img_path: str):
+def preprocess_image(img_path: str, kernel_size):
     """
     - Read image in\n
     - Convert to Grayscale\n
     - Apply a Gaussian Blur to remove noise
 
+    :param kernel_size:
     :param img_path: path to image
     :returns: blurred and grayscale image
     """
 
     # Read the original image
     img = cv2.imread(img_path)
-
+    # cv2.imshow("img", img)
+    # cv2.waitKey(0)
     # Convert to grayscale
     img_gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
     # Use a Gaussian Blur on the image to improve edge detection
-    img_blur = cv2.GaussianBlur(img_gray, (5, 5), 0)
+    img_blur = cv2.GaussianBlur(img_gray, (kernel_size, kernel_size), 0)
 
     return img_blur
 
 
-def detect_edges(img):
+def detect_edges(img, min_edge, max_edge):
     """
     Use Canny Edge Detection to find edges
     :param img: test
     :return: edges
     """
     # Canny Edge Detection
-    edges = cv2.Canny(image=img, threshold1=50, threshold2=150)
+    edges = cv2.Canny(image=img, threshold1=min_edge, threshold2=max_edge)
 
     # dilated_edges = cv2.dilate(edges, np.ones((2, 2), dtype=np.uint8))
+
+    # cv2.imshow("e", edges)
+    # cv2.waitKey(0)
 
     return edges
 
 
-def detect_lines(path: str, edges: np.array, img_name: str):
-    lines = cv2.HoughLinesP(edges, rho=0.991, theta=1 * np.pi / 180, threshold=55, minLineLength=80, maxLineGap=50)
+def detect_lines(path: str, edges: np.array, img_name: str, rho, theta, threshold, min_length, max_gap):
+    lines = cv2.HoughLinesP(edges, rho=rho, theta=theta, threshold=threshold, minLineLength=min_length, maxLineGap=max_gap)
     line_list = []
     img = cv2.imread(path)
+
     for line in lines:
         x1 = line[0][0]
         y1 = line[0][1]
@@ -65,6 +72,7 @@ def detect_lines(path: str, edges: np.array, img_name: str):
         cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 1)  # add line to image for representation
 
     # cv2.imwrite(f'houghlines - {img_name}.jpg', img)
+
     return line_list
 
 
@@ -97,6 +105,7 @@ def calculate_line_segments(line_coords: list):
     point_2 = line_coords[0][1]
     point_3 = None
     counters = [0, 0, 0]
+
 
     for i in range(1, len(line_coords)):
         x_start = line_coords[i][0][0]
@@ -174,15 +183,23 @@ def calculate_distance(point_1, point_2):
     return math.sqrt((x_difference ** 2) + (y_difference ** 2))
 
 
-def cosine_rule(point_1, point_2, point_3):
+def cosine_rule(point_1, point_2, point_3, path):
     if not point_3 or not point_1 or not point_2:
-        print(f"Not enough lines to calculate angle, please ensure {path} is correct")
-        return None
+        print(f"Not enough lines to calculate angle, please ensure {path} and parameters are correct")
+        return 0
     a = calculate_distance(point_1, point_3)
     b = calculate_distance(point_2, point_3)
     c = calculate_distance(point_1, point_2)
 
     return degrees(acos(((a ** 2) + (b ** 2) - (c ** 2)) / (2 * a * b)))
+
+
+def calculate_accuracy(true_vals, pred_vals):
+    accuracy = []
+    for i in range(len(true_vals)):
+        accuracy.append(abs((true_vals[i] - pred_vals[i]) / true_vals[i]))
+
+    return np.mean(accuracy)
 
 
 # Function to apply necessary checks on image list file
@@ -199,34 +216,73 @@ def file_name_checks(args):
 
 
 # file_name = file_name_checks(sys.argv)
+# file_name = "./extra_images/list.txt"
 file_name = "list.txt"
 list_file = open(file_name, "r")
 
-start_time = time.time()
 
-predicted_accuracy = []
-real_accuracy = []
+def start_method(params):
+    # print("PARAMS: ", params)
+    min_edge, max_edge, kernel_size, rho, theta, threshold, min_length, max_gap = int(params["min_edge"]), int(params["max_edge"]), int(
+        params["kernel_size"]), float(params["rho"]), int(params["theta"]), int(
+        params["threshold"]), float(params["min_length"]), int(params["max_gap"])
+    start_time = time.time()
 
-for image_text in list_file:
-    line = image_text.split(',')
+    predicted_accuracy = []
+    real_accuracy = []
+    try:
+        for image_text in list_file:
+            line = image_text.split(',')
 
-    path = line[0]
-    correct_angle = line[1].replace('\n', '')
+            # path = "./extra_images/" + line[0]
+            path = line[0]
+            # path = "./extra_images/end=720.png"
+            correct_angle = line[1].replace('\n', '')
+            image = preprocess_image(path, kernel_size)
+            edges = detect_edges(image, min_edge, max_edge)
+            line_coords = detect_lines(path, edges, path, rho, theta, threshold, min_length, max_gap)
 
-    image = preprocess_image(path)
-    edges = detect_edges(image)
-    line_coords = detect_lines(path, edges, path)
+            p_1, p_2, p_3 = calculate_line_segments(line_coords)
 
-    p_1, p_2, p_3 = calculate_line_segments(line_coords)
+            angle = cosine_rule(p_1, p_2, p_3, path)
 
-    angle = cosine_rule(p_1, p_2, p_3)
+            predicted_accuracy.append(angle)
+            real_accuracy.append(int(float(correct_angle)))
 
-    predicted_accuracy.append(angle)
-    real_accuracy.append(int(correct_angle))
+            print(f"{path}, Calculated: {angle}, Actual: {correct_angle}")
 
-    print(f"{path}, Calculated: {angle}, Actual: {correct_angle}")
+        print("MSE: ", mean_squared_error(real_accuracy, predicted_accuracy))
+        end_time = time.time()
+        time_lapsed = end_time - start_time
 
-print(mean_squared_error(real_accuracy, predicted_accuracy))
-end_time = time.time()
-time_lapsed = end_time - start_time
+        accuracy = 1 - calculate_accuracy(real_accuracy, predicted_accuracy)
+        print("Accuracy: ", accuracy)
+    except:
+        accuracy = 0
+    return {"loss": -accuracy, "status": STATUS_OK}
 # print(time_lapsed)
+
+
+space = {
+    "min_edge": hp.uniform("min_edge", 1, 20),
+    "max_edge": hp.uniform("max_edge", 2, 575),
+    "kernel_size": hp.choice("kernel_size", [1, 3, 5, 7, 9, 11, 13, 15]),
+    "rho": hp.uniform("rho", 0, 1),
+    "theta": hp.uniform("theta", 0, np.pi),
+    "threshold": hp.uniform("threshold", 1, 80),
+    "min_length": hp.uniform("min_length", 1, 150),
+    "max_gap": hp.uniform("max_gap", 50, 150)xuu
+
+}
+
+trials = Trials()
+
+best = fmin(
+    fn=start_method,
+    space=space,
+    algo=tpe.suggest,
+    max_evals=100000,
+    trials=trials
+)
+
+print(best)
