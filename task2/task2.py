@@ -9,7 +9,8 @@ from image_compare import compare_rgb
 from template import generate_templates, mask_icon, generate_gaussian_pyramid, zero_mean_match_template, ssd_match_template
 from tqdm import tqdm
 
-THRESHOLD: int = 165000
+SSD_THRESHOLD: int = 165000
+ZMT_THRESHOLD: int = 150000
 
 # TODO Implement intensity normalization
 # TODO Implement normalized cross correlation
@@ -24,34 +25,20 @@ def main() -> None:
     test_directory_path: Path = Path("./test/images").resolve(strict=True)
     train_directory_path: Path = Path("./train/png").resolve(strict=True)
     templates: Dict[str, Dict[int, np.ndarray]] = get_templates(train_directory_path)
-    # for class_name, sampling_levels in templates.items():
-    #     for sampling_level, template in sampling_levels.items():
-    #         cv.imshow(f"{class_name} {sampling_level}", template)
-    #         cv.waitKey()
-    #         cv.destroyWindow(f"{class_name} {sampling_level}")
     images: List[str, np.ndarray] = get_test_images(test_directory_path)
     progress: tqdm = tqdm(total=len(images) * len(templates), desc="Predicting Classes")
     for image, image_masked, image_name in images:
-    #     cv.imshow("image", image)
-    #     cv.imshow("image_masked", image_masked)
-    #     cv.waitKey()
-    #     cv.destroyAllWindows()
-        predict_icon_classes(image_masked, image, image_name, templates, predict_image_directory_path, predict_annotation_directory_path, progress)
-    cv.waitKey()
-    cv.waitKey()
-    cv.destroyAllWindows()
+        predict_zmt_icon_classes(image_masked, image, image_name, templates, predict_image_directory_path, predict_annotation_directory_path, progress)
 
 
-def predict_icon_classes(image_masked: np.ndarray, image_predict: np.ndarray, image_name: str, templates: Dict[str, np.ndarray], predict_image_directory_path: Path, predict_annotation_directory_path: Path, progress: tqdm) -> str:
+def predict_ssd_icon_classes(image_masked: np.ndarray, image_predict: np.ndarray, image_name: str, templates: Dict[str, np.ndarray], predict_image_directory_path: Path, predict_annotation_directory_path: Path, progress: tqdm) -> str:
     """Predicts icon classes for all icons in the given image."""
-    # cv.imshow(image_name, image_masked)
     bounding_boxes: Set[Tuple[int]] = set()
     for class_name, sampling_levels in templates.items():
-        # for sampling_level, template in sampling_levels.items():
         template = sampling_levels[3]
         if template.shape[0] < image_masked.shape[0] and template.shape[1] < image_masked.shape[1]:
             match_map, pred_value, pred_centre = ssd_match_template(image_masked, template)
-            if pred_value < THRESHOLD:
+            if pred_value < SSD_THRESHOLD:
                 label_top, label_bottom = class_name.split("-", maxsplit=1)
                 bounding_box_origin: Tuple[int, int] = (pred_centre[0] - 31, pred_centre[1] - 31)
                 current_bounding_box: Tuple[int, int, int, int, str, str, float] = (
@@ -68,6 +55,36 @@ def predict_icon_classes(image_masked: np.ndarray, image_predict: np.ndarray, im
     render_bounding_boxes(image_predict, bounding_boxes)
     write_annotation_file(predict_annotation_directory_path, image_name, bounding_boxes)
     cv.imwrite(f"{predict_image_directory_path}/{image_name}", image_predict)
+
+
+def predict_zmt_icon_classes(image_masked: np.ndarray, image_predict: np.ndarray, image_name: str, templates: Dict[str, np.ndarray], predict_image_directory_path: Path, predict_annotation_directory_path: Path, progress: tqdm) -> str:
+    """Predicts icon classes for all icons in the given image."""
+    bounding_boxes: Set[Tuple[int]] = set()
+    for class_name, sampling_levels in templates.items():
+        template = sampling_levels[3]
+        if template.shape[0] < image_masked.shape[0] and template.shape[1] < image_masked.shape[1]:
+            match_map, pred_value, pred_centre = zero_mean_match_template(image_masked, template)
+            print(f"{class_name}: {pred_value}")
+            if pred_value > ZMT_THRESHOLD:
+                label_top, label_bottom = class_name.split("-", maxsplit=1)
+                bounding_box_origin: Tuple[int, int] = (pred_centre[0] - 31, pred_centre[1] - 31)
+                current_bounding_box: Tuple[int, int, int, int, str, str, float] = (
+                    bounding_box_origin[0], bounding_box_origin[1], template.shape[0] - 1, template.shape[1] - 1, label_top, label_bottom, pred_value
+                )
+                bounding_boxes.add(current_bounding_box)
+                bounding_box_removals: Set[Tuple[int, int, int, int, str, str, float]] = set()
+                for bounding_box in bounding_boxes:
+                    if bounding_box != current_bounding_box:
+                        if abs(bounding_box[0] - current_bounding_box[0]) <= template.shape[0] and abs(bounding_box[1] - current_bounding_box[1]) <= template.shape[1]:
+                            bounding_box_removals.add(bounding_box if current_bounding_box[6] > bounding_box[6] else current_bounding_box)
+                bounding_boxes.difference_update(bounding_box_removals)
+        progress.update(1)
+    render_bounding_boxes(image_predict, bounding_boxes)
+    cv.imshow("image", image_predict)
+    cv.waitKey(0)
+    cv.destroyAllWindows()
+    # write_annotation_file(predict_annotation_directory_path, image_name, bounding_boxes)
+    # cv.imwrite(f"{predict_image_directory_path}/{image_name}", image_predict)
 
 
 def write_annotation_file(predict_annotation_directory_path: Path, image_name: str, bounding_boxes: Set[Tuple[int, int, int, int, str, str, float]]) -> None:
