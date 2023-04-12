@@ -34,7 +34,7 @@ def mask_icon(icon_bgra):
     alpha_mask = cv.cvtColor(alpha, cv.COLOR_GRAY2BGR)
     icon_bgr = cv.cvtColor(icon_bgra, cv.COLOR_BGRA2BGR)
     icon_masked: np.ndarray = cv.bitwise_and(icon_bgr, alpha_mask)
-    icon_masked = cv.copyMakeBorder(icon_masked, 1, 1, 1, 1, cv.BORDER_CONSTANT, None, BLACK)
+    icon_masked = cv.copyMakeBorder(icon_masked, 1, 1, 1, 1, cv.BORDER_CONSTANT, None, BLACK)  # type: ignore
     return icon_masked
 
 
@@ -45,7 +45,7 @@ def naive_match_template(image: np.ndarray, template: np.ndarray) -> Tuple[float
         dst=None,
         alpha=0,
         beta=255,
-        norm_type=cv.NORM_MINMAX,
+        norm_type=cv.NORM_MINMAX,  # type: ignore
         dtype=cv.CV_8U,
     )
     _, max_val, _, max_loc = cv.minMaxLoc(match_map)
@@ -73,7 +73,7 @@ def ssd_match_template(image: np.ndarray, template: np.ndarray) -> Tuple[float, 
         template.shape[1] // 2,
         template.shape[1] // 2,
         cv.BORDER_DEFAULT,
-        None,
+        None,  # type: ignore
         0,
     )
     match_map: np.ndarray = np.zeros(
