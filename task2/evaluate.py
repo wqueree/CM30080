@@ -1,6 +1,7 @@
 import statistics
+from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 
 import cv2 as cv
 import numpy as np
@@ -9,34 +10,43 @@ import numpy as np
 def main() -> None:
     pred_path_root: Path = Path("./predict/annotations")
     gt_path_root: Path = Path("./test/annotations")
-    mean_ious = list()
+    results: Dict[str, float] = evaluate_results(pred_path_root, gt_path_root)
+    print(results)
+
+
+def evaluate_results(pred_path_root: Path, gt_path_root: Path) -> Dict[str, float]:
+    """Evaluates the results of all results in the given prediction and ground truth paths."""
+    results: Dict[str, float] = dict()
+    raw_results: Dict[str, List[float]] = defaultdict(list)
     for pred_path, gt_path in zip(pred_path_root.rglob("*.txt"), gt_path_root.rglob("*.txt")):
-        mean_ious.append(evaluate(pred_path, gt_path))
-    print(statistics.mean(mean_ious))
+        evaluate_result(pred_path, gt_path, raw_results)
+    results["iou"] = statistics.mean(raw_results["iou"])
+    return results
 
 
-def evaluate(path_pred: Union[str, Path], path_gt: Union[str, Path]) -> Dict[str, float]:
+def evaluate_result(path_pred: Union[str, Path], path_gt: Union[str, Path], raw_results: Dict[str, List[float]]) -> None:
+    """Evaluates the result of the given prediction and ground truth paths."""
     results: Dict[str, float] = dict()
     with open(path_pred, "r", encoding="utf8") as pred_file:
         results_pred_raw: List[str] = sorted([line.strip() for line in pred_file.readlines()])
     with open(path_gt, "r", encoding="utf8") as gt_file:
         results_gt_raw: List[str] = sorted([line.strip() for line in gt_file.readlines()])
     results_raw = zip(results_pred_raw, results_gt_raw)
-    ious = list()
     for result_pred_raw, result_gt_raw in results_raw:
         class_name_pred, *box_pred = parse_raw_result_string(result_pred_raw)
         class_name_gt, *box_gt = parse_raw_result_string(result_gt_raw)
-        ious.append(calculate_iou(class_name_pred, box_pred, class_name_gt, box_gt))
-    return statistics.mean(ious)
+        raw_results["iou"].append(calculate_iou(class_name_pred, box_pred, class_name_gt, box_gt))
 
 
-def parse_raw_result_string(result_string: str) -> List[float]:
+def parse_raw_result_string(result_string: str) -> Tuple[str, float]:
+    """Parses the given raw result string into a list of floats."""
     class_name, x1_raw, y1_raw, x2_raw, y2_raw = result_string.split(", ")
     x1, y1, x2, y2 = int(x1_raw.lstrip("(")), int(y1_raw.rstrip(")")), int(x2_raw.lstrip("(")), int(y2_raw.rstrip(")"))
     return class_name, x1, y1, x2, y2
 
 
 def calculate_iou(class_name_pred: str, box_pred: List[float], class_name_gt: str, box_gt: List[float]) -> float:
+    """Calculates the intersection over union of the given prediction and ground truth boxes."""
     result = None
     if class_name_pred == class_name_gt:
         x1_pred, y1_pred, x2_pred, y2_pred = box_pred
