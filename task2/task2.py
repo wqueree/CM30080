@@ -39,7 +39,7 @@ def predict(test_directory_path: Path, train_directory_path: Path, method: str) 
         predict_icon_classes(method, image_masked, image, image_name, templates, predict_image_directory_path, predict_annotation_directory_path, progress)
 
 
-def predict_icon_classes(method: str, image_masked: np.ndarray, image_predict: np.ndarray, image_name: str, templates: Dict[str, Dict[int, np.ndarray]], predict_image_directory_path: Path, predict_annotation_directory_path: Path, progress: tqdm) -> None:
+def predict_icon_classes(method: str, image_masked: np.ndarray, image_predict: np.ndarray, image_name: str, templates: Dict[str, List[np.ndarray]], predict_image_directory_path: Path, predict_annotation_directory_path: Path, progress: tqdm) -> None:
     """Predicts icon classes for all icons in the given image using the ssd method."""
     bounding_boxes: Set[Tuple[int, int, int, int, str, str, float]] = set()
     for class_name, sampling_levels in templates.items():
