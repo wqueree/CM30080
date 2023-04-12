@@ -38,16 +38,15 @@ def evaluate_result(path_pred: Union[str, Path], path_gt: Union[str, Path], raw_
         raw_results["iou"].append(calculate_iou(class_name_pred, box_pred, class_name_gt, box_gt))
 
 
-def parse_raw_result_string(result_string: str) -> Tuple[str, float]:
+def parse_raw_result_string(result_string: str) -> Tuple[str, int, int, int, int]:
     """Parses the given raw result string into a list of floats."""
     class_name, x1_raw, y1_raw, x2_raw, y2_raw = result_string.split(", ")
     x1, y1, x2, y2 = int(x1_raw.lstrip("(")), int(y1_raw.rstrip(")")), int(x2_raw.lstrip("(")), int(y2_raw.rstrip(")"))
     return class_name, x1, y1, x2, y2
 
 
-def calculate_iou(class_name_pred: str, box_pred: List[float], class_name_gt: str, box_gt: List[float]) -> float:
+def calculate_iou(class_name_pred: str, box_pred: List[int], class_name_gt: str, box_gt: List[int]) -> float:
     """Calculates the intersection over union of the given prediction and ground truth boxes."""
-    result = None
     if class_name_pred == class_name_gt:
         x1_pred, y1_pred, x2_pred, y2_pred = box_pred
         x1_gt, y1_gt, x2_gt, y2_gt = box_gt
@@ -59,10 +58,8 @@ def calculate_iou(class_name_pred: str, box_pred: List[float], class_name_gt: st
         y2: int = min(y2_pred, y2_gt)
         intersection_area: int = (x2 - x1) * (y2 - y1)
         union_area: int = pred_area + gt_area - intersection_area
-        result = intersection_area / union_area
-    else:
-        result = 0.0
-    return result
+        return intersection_area / union_area
+    return 0.0
 
 
 if __name__ == "__main__":

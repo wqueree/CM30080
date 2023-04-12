@@ -32,16 +32,16 @@ def predict(test_directory_path: Path, train_directory_path: Path, method: str) 
     predict_image_directory_path.mkdir(parents=True, exist_ok=True)
     predict_annotation_directory_path: Path = Path("./predict/annotations")
     predict_annotation_directory_path.mkdir(parents=True, exist_ok=True)
-    images: List[str, np.ndarray] = generate_test_images(test_directory_path)
-    templates: Dict[str, Dict[int, np.ndarray]] = generate_templates(train_directory_path)
+    images: List[Tuple[np.ndarray, np.ndarray, str]] = generate_test_images(test_directory_path)
+    templates: Dict[str, List[np.ndarray]] = generate_templates(train_directory_path)
     progress: tqdm = tqdm(total=len(images) * len(templates), desc="Predicting Classes")
     for image, image_masked, image_name in images:
         predict_icon_classes(method, image_masked, image, image_name, templates, predict_image_directory_path, predict_annotation_directory_path, progress)
 
 
-def predict_icon_classes(method: str, image_masked: np.ndarray, image_predict: np.ndarray, image_name: str, templates: Dict[str, np.ndarray], predict_image_directory_path: Path, predict_annotation_directory_path: Path, progress: tqdm) -> str:
+def predict_icon_classes(method: str, image_masked: np.ndarray, image_predict: np.ndarray, image_name: str, templates: Dict[str, Dict[int, np.ndarray]], predict_image_directory_path: Path, predict_annotation_directory_path: Path, progress: tqdm) -> None:
     """Predicts icon classes for all icons in the given image using the ssd method."""
-    bounding_boxes: Set[Tuple[int]] = set()
+    bounding_boxes: Set[Tuple[int, int, int, int, str, str, float]] = set()
     for class_name, sampling_levels in templates.items():
         template = sampling_levels[3]
         if template.shape[0] < image_masked.shape[0] and template.shape[1] < image_masked.shape[1]:
