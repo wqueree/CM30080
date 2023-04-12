@@ -6,10 +6,9 @@ import cv2 as cv
 import numpy as np
 from bounding_box import render_bounding_boxes
 from method import SSD, ZMT
-from template import generate_templates, zero_mean_match_template, ssd_match_template
+from template import generate_templates, ssd_match_template, zero_mean_match_template
 from test_image import generate_test_images
 from tqdm import tqdm
-
 
 SSD_THRESHOLD: int = 165000
 ZMT_THRESHOLD: int = 150000
@@ -36,10 +35,28 @@ def predict(test_directory_path: Path, train_directory_path: Path, method: str) 
     templates: Dict[str, List[np.ndarray]] = generate_templates(train_directory_path)
     progress: tqdm = tqdm(total=len(images) * len(templates), desc="Predicting Classes")
     for image, image_masked, image_name in images:
-        predict_icon_classes(method, image_masked, image, image_name, templates, predict_image_directory_path, predict_annotation_directory_path, progress)
+        predict_icon_classes(
+            method,
+            image_masked,
+            image,
+            image_name,
+            templates,
+            predict_image_directory_path,
+            predict_annotation_directory_path,
+            progress,
+        )
 
 
-def predict_icon_classes(method: str, image_masked: np.ndarray, image_predict: np.ndarray, image_name: str, templates: Dict[str, List[np.ndarray]], predict_image_directory_path: Path, predict_annotation_directory_path: Path, progress: tqdm) -> None:
+def predict_icon_classes(
+    method: str,
+    image_masked: np.ndarray,
+    image_predict: np.ndarray,
+    image_name: str,
+    templates: Dict[str, List[np.ndarray]],
+    predict_image_directory_path: Path,
+    predict_annotation_directory_path: Path,
+    progress: tqdm,
+) -> None:
     """Predicts icon classes for all icons in the given image using the ssd method."""
     bounding_boxes: Set[Tuple[int, int, int, int, str, str, float]] = set()
     for class_name, sampling_levels in templates.items():
@@ -49,31 +66,65 @@ def predict_icon_classes(method: str, image_masked: np.ndarray, image_predict: n
                 pred_value, pred_centre = ssd_match_template(image_masked, template)
                 if pred_value < SSD_THRESHOLD:
                     label_top, label_bottom = class_name.split("-", maxsplit=1)
-                    bounding_box_origin: Tuple[int, int] = (pred_centre[0] - 31, pred_centre[1] - 31)
+                    bounding_box_origin: Tuple[int, int] = (
+                        pred_centre[0] - 31,
+                        pred_centre[1] - 31,
+                    )
                     current_bounding_box: Tuple[int, int, int, int, str, str, float] = (
-                        bounding_box_origin[0], bounding_box_origin[1], template.shape[0] - 1, template.shape[1] - 1, label_top, label_bottom, pred_value
+                        bounding_box_origin[0],
+                        bounding_box_origin[1],
+                        template.shape[0] - 1,
+                        template.shape[1] - 1,
+                        label_top,
+                        label_bottom,
+                        pred_value,
                     )
                     bounding_boxes.add(current_bounding_box)
                     bounding_box_removals: Set[Tuple[int, int, int, int, str, str, float]] = set()
                     for bounding_box in bounding_boxes:
                         if bounding_box != current_bounding_box:
-                            if abs(bounding_box[0] - current_bounding_box[0]) <= template.shape[0] and abs(bounding_box[1] - current_bounding_box[1]) <= template.shape[1]:
-                                bounding_box_removals.add(bounding_box if current_bounding_box[6] < bounding_box[6] else current_bounding_box)
+                            if (
+                                abs(bounding_box[0] - current_bounding_box[0]) <= template.shape[0]
+                                and abs(bounding_box[1] - current_bounding_box[1])
+                                <= template.shape[1]
+                            ):
+                                bounding_box_removals.add(
+                                    bounding_box
+                                    if current_bounding_box[6] < bounding_box[6]
+                                    else current_bounding_box
+                                )
                     bounding_boxes.difference_update(bounding_box_removals)
             if method == ZMT:
                 pred_value, pred_centre = zero_mean_match_template(image_masked, template)
                 if pred_value > ZMT_THRESHOLD:
                     label_top, label_bottom = class_name.split("-", maxsplit=1)
-                    bounding_box_origin: Tuple[int, int] = (pred_centre[0], pred_centre[1])
+                    bounding_box_origin: Tuple[int, int] = (
+                        pred_centre[0],
+                        pred_centre[1],
+                    )
                     current_bounding_box: Tuple[int, int, int, int, str, str, float] = (
-                        bounding_box_origin[0], bounding_box_origin[1], template.shape[0] - 1, template.shape[1] - 1, label_top, label_bottom, pred_value
+                        bounding_box_origin[0],
+                        bounding_box_origin[1],
+                        template.shape[0] - 1,
+                        template.shape[1] - 1,
+                        label_top,
+                        label_bottom,
+                        pred_value,
                     )
                     bounding_boxes.add(current_bounding_box)
                     bounding_box_removals: Set[Tuple[int, int, int, int, str, str, float]] = set()
                     for bounding_box in bounding_boxes:
                         if bounding_box != current_bounding_box:
-                            if abs(bounding_box[0] - current_bounding_box[0]) <= template.shape[0] and abs(bounding_box[1] - current_bounding_box[1]) <= template.shape[1]:
-                                bounding_box_removals.add(bounding_box if current_bounding_box[6] > bounding_box[6] else current_bounding_box)
+                            if (
+                                abs(bounding_box[0] - current_bounding_box[0]) <= template.shape[0]
+                                and abs(bounding_box[1] - current_bounding_box[1])
+                                <= template.shape[1]
+                            ):
+                                bounding_box_removals.add(
+                                    bounding_box
+                                    if current_bounding_box[6] > bounding_box[6]
+                                    else current_bounding_box
+                                )
                     bounding_boxes.difference_update(bounding_box_removals)
         progress.update(1)
     render_bounding_boxes(image_predict, bounding_boxes)
@@ -81,10 +132,19 @@ def predict_icon_classes(method: str, image_masked: np.ndarray, image_predict: n
     cv.imwrite(f"{predict_image_directory_path}/{image_name}", image_predict)
 
 
-def write_annotation_file(predict_annotation_directory_path: Path, image_name: str, bounding_boxes: Set[Tuple[int, int, int, int, str, str, float]]) -> None:
+def write_annotation_file(
+    predict_annotation_directory_path: Path,
+    image_name: str,
+    bounding_boxes: Set[Tuple[int, int, int, int, str, str, float]],
+) -> None:
     """Writes the given bounding boxes to an annotation file."""
-    annotation_lines = [f"{bounding_box[5]}, ({bounding_box[0]}, {bounding_box[1]}), ({bounding_box[0] + bounding_box[2]}, {bounding_box[1] + bounding_box[3]})\n" for bounding_box in bounding_boxes]
-    with open(f"{predict_annotation_directory_path}/{Path(image_name).stem}.txt", "w") as annotation_file:
+    annotation_lines = [
+        f"{bounding_box[5]}, ({bounding_box[0]}, {bounding_box[1]}), ({bounding_box[0] + bounding_box[2]}, {bounding_box[1] + bounding_box[3]})\n"
+        for bounding_box in bounding_boxes
+    ]
+    with open(
+        f"{predict_annotation_directory_path}/{Path(image_name).stem}.txt", "w"
+    ) as annotation_file:
         annotation_file.writelines(annotation_lines)
 
 
