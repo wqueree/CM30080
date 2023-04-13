@@ -1,12 +1,9 @@
 import cv2
 
 
-def get_icon_boxes(path):
-    # Load the image
-    img = cv2.imread(path)
-
+def get_icon_boxes(image, show=False):
     # Convert to grayscale
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     gray = cv2.GaussianBlur(gray, (5, 5), 0)
 
@@ -23,6 +20,7 @@ def get_icon_boxes(path):
     # Find contours in the image
     contours, hierarchy = cv2.findContours(closed, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
+    # bounding_coords = [path]
     bounding_coords = []
     for cnt in contours:
         bounding_coords.append(cv2.boundingRect(cnt))
@@ -41,17 +39,15 @@ def get_icon_boxes(path):
             n += 1
         i += 1
 
-    # Draw bounding boxes around the contours
-    for box in bounding_coords:
-        x, y, w, h = box
-        cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
+    if show:
+        # Draw bounding boxes around the contours
+        for i in range(0, len(bounding_coords)):
+            x, y, w, h = bounding_coords[i]
+            cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
-    # Display the result
-    cv2.imshow('Result', img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+        # Display the result
+        cv2.imshow('Result', image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     return bounding_coords
-
-
-# print(segment_icons("./TestWithoutRotations/images/test_image_1.png"))
