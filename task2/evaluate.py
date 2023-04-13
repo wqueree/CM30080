@@ -7,7 +7,7 @@ from typing import Dict, List, Tuple, Union
 
 def main() -> None:
     parser: ArgumentParser = ArgumentParser()
-    parser.add_argument("--pred_path_root", type=str, default="./predict/annotations")
+    parser.add_argument("--pred_path_root", type=str, default="./predict/annotations/4")
     parser.add_argument("--gt_path_root", type=str, default="./test/annotations")
     args: Namespace = parser.parse_args()
     pred_path_root: Path = Path(args.pred_path_root).resolve(strict=True)
