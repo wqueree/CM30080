@@ -1,5 +1,4 @@
-from pathlib import Path
-from typing import Iterable, List, Tuple, Union
+from typing import Iterable, Tuple
 
 import cv2
 import numpy as np
@@ -23,14 +22,14 @@ def render_bounding_box(
 ) -> None:
     """Renders a single labelled bounding box onto the specified image."""
     x, y, w, h, label_top, label_bottom, _ = bounding_box
-    cv2.rectangle(image, (x, y), (x + w, y + h), RED, 1)
-    cv2.putText(image, label_top, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, RED, 1)
+    cv2.rectangle(image, (x, y), (x + w, y + h), color, 1)
+    cv2.putText(image, label_top, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
     cv2.putText(
         image,
         label_bottom,
         (x, y + h + 15),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.5,
-        RED,
+        color,
         1,
     )

@@ -8,6 +8,7 @@ from color import BLACK
 
 def generate_templates(
     train_directory_path: Path,
+    sampling_levels: int = 4,
 ) -> Dict[str, List[np.ndarray]]:
     """Gets and crops training icons from the given directory."""
     icon_templates: Dict[str, List[np.ndarray]] = dict()
@@ -15,7 +16,9 @@ def generate_templates(
         icon_bgra: np.ndarray = cv.imread(str(icon_path), cv.IMREAD_UNCHANGED)
         masked_icon: np.ndarray = mask_icon(icon_bgra)
         masked_icon_grayscale = cv.cvtColor(masked_icon, cv.COLOR_BGR2GRAY)
-        icon_templates[icon_path.stem] = generate_gaussian_pyramid(masked_icon_grayscale, 6)
+        icon_templates[icon_path.stem] = generate_gaussian_pyramid(
+            masked_icon_grayscale, sampling_levels
+        )
     return icon_templates
 
 
