@@ -5,7 +5,7 @@ from typing import Dict, List, Set, Tuple
 import cv2 as cv
 import numpy as np
 from bounding_box import render_bounding_boxes
-from correlation import ssd_correlation
+from correlate import ssd_correlation
 from template import generate_templates
 from test_image import generate_test_images
 from tqdm import tqdm
