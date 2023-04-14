@@ -74,7 +74,7 @@ def predict_icon_classes(
             ):
                 pred_value, pred_centre = ssd_correlation(image_masked, template)
                 if pred_value < SSD_THRESHOLDS[template_sampling_level]:
-                    non_maximum_suppression(
+                    non_maxima_suppression(
                         class_name, pred_centre, pred_value, template_sampling_level, bounding_boxes
                     )
             progress.update(1)
@@ -96,7 +96,7 @@ def predict_icon_classes(
         )
 
 
-def non_maximum_suppression(
+def non_maxima_suppression(
     class_name: str,
     pred_centre: Tuple[int, int],
     pred_value: float,
