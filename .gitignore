@@ -128,7 +128,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Output images
+# Task 2
 task2/predict/
 task2/report/
 task2/scratch.py
