@@ -84,6 +84,8 @@ def calculate_iou(box_pred: Tuple[int, int, int, int], box_gt: Tuple[int, int, i
     y1: int = max(y1_pred, y1_gt)
     x2: int = min(x2_pred, x2_gt)
     y2: int = min(y2_pred, y2_gt)
+    if x1 > x2 or y1 > y2:
+        return 0.0
     intersection_area: int = (x2 - x1) * (y2 - y1)
     union_area: int = pred_area + gt_area - intersection_area
     return intersection_area / union_area if union_area > 0 else 0.0
