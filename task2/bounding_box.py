@@ -12,7 +12,7 @@ def render_bounding_boxes(
 ) -> None:
     """Renders bounding boxes onto the specified image."""
     for bounding_box in bounding_boxes:
-        render_bounding_box(image, bounding_box)
+        render_bounding_box(image, bounding_box, color)
 
 
 def render_bounding_box(
