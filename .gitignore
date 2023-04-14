@@ -131,3 +131,4 @@ dmypy.json
 # Output images
 task2/predict/
 task2/report/
+task2/scratch.py
