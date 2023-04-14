@@ -6,11 +6,18 @@ from typing import Dict, List, Set, Tuple
 import cv2 as cv
 import numpy as np
 from bounding_box import render_bounding_boxes
-from template import generate_templates, ssd_match_template
+from correlation import ssd_correlation
+from template import generate_templates
 from test_image import generate_test_images
 from tqdm import tqdm
 
-SSD_THRESHOLDS: Dict[int, int] = {0: 165000, 1: 165000, 2: 165000, 3: 165000, 4: 100000}
+SSD_THRESHOLDS: Dict[int, int] = {
+    0: 10000000,
+    1: 5000000,
+    2: 1500000,
+    3: 165000,
+    4: 100000,
+}
 BOUNDING_BOX_SIZE: int = 64
 
 
@@ -76,38 +83,11 @@ def predict_icon_classes(
                 template.shape[0] < image_masked.shape[0]
                 and template.shape[1] < image_masked.shape[1]
             ):
-                pred_value, pred_centre = ssd_match_template(image_masked, template)
-                print(f"{class_name=} {pred_value=}")
+                pred_value, pred_centre = ssd_correlation(image_masked, template)
                 if pred_value < SSD_THRESHOLDS[template_sampling_level]:
-                    label_top, label_bottom = class_name.split("-", maxsplit=1)
-                    bounding_box_origin: Tuple[int, int] = (
-                        pred_centre[0] - ((BOUNDING_BOX_SIZE // 2) - 1),
-                        pred_centre[1] - ((BOUNDING_BOX_SIZE // 2) - 1),
+                    non_maximum_suppression(
+                        class_name, pred_centre, pred_value, template_sampling_level, bounding_boxes
                     )
-                    current_bounding_box: Tuple[int, int, int, int, str, str, float] = (
-                        bounding_box_origin[0],
-                        bounding_box_origin[1],
-                        BOUNDING_BOX_SIZE,
-                        BOUNDING_BOX_SIZE,
-                        label_top,
-                        label_bottom,
-                        pred_value,
-                    )
-                    bounding_boxes[template_sampling_level].add(current_bounding_box)
-                    bounding_box_removals: Set[Tuple[int, int, int, int, str, str, float]] = set()
-                    for bounding_box in bounding_boxes[template_sampling_level]:
-                        if bounding_box != current_bounding_box:
-                            if (
-                                abs(bounding_box[0] - current_bounding_box[0]) <= BOUNDING_BOX_SIZE
-                                and abs(bounding_box[1] - current_bounding_box[1])
-                                <= BOUNDING_BOX_SIZE
-                            ):
-                                bounding_box_removals.add(
-                                    bounding_box
-                                    if current_bounding_box[6] < bounding_box[6]
-                                    else current_bounding_box
-                                )
-                    bounding_boxes[template_sampling_level].difference_update(bounding_box_removals)
             progress.update(1)
 
     for template_sampling_level, bounding_boxes_sampling_level in bounding_boxes.items():
@@ -125,6 +105,44 @@ def predict_icon_classes(
             image_name,
             bounding_boxes_sampling_level,
         )
+
+
+def non_maximum_suppression(
+    class_name: str,
+    pred_centre: Tuple[int, int],
+    pred_value: float,
+    template_sampling_level,
+    bounding_boxes: Dict[int, Set[Tuple[int, int, int, int, str, str, float]]],
+) -> None:
+    """Breaks ties for overlapping boxes."""
+    label_top, label_bottom = class_name.split("-", maxsplit=1)
+    bounding_box_origin: Tuple[int, int] = (
+        pred_centre[0] - ((BOUNDING_BOX_SIZE // 2) - 1),
+        pred_centre[1] - ((BOUNDING_BOX_SIZE // 2) - 1),
+    )
+    current_bounding_box: Tuple[int, int, int, int, str, str, float] = (
+        bounding_box_origin[0],
+        bounding_box_origin[1],
+        BOUNDING_BOX_SIZE,
+        BOUNDING_BOX_SIZE,
+        label_top,
+        label_bottom,
+        pred_value,
+    )
+    bounding_boxes[template_sampling_level].add(current_bounding_box)
+    bounding_box_removals: Set[Tuple[int, int, int, int, str, str, float]] = set()
+    for bounding_box in bounding_boxes[template_sampling_level]:
+        if bounding_box != current_bounding_box:
+            if (
+                abs(bounding_box[0] - current_bounding_box[0]) <= BOUNDING_BOX_SIZE
+                and abs(bounding_box[1] - current_bounding_box[1]) <= BOUNDING_BOX_SIZE
+            ):
+                bounding_box_removals.add(
+                    bounding_box
+                    if current_bounding_box[6] < bounding_box[6]
+                    else current_bounding_box
+                )
+    bounding_boxes[template_sampling_level].difference_update(bounding_box_removals)
 
 
 def write_image_file(
