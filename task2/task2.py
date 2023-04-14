@@ -52,7 +52,8 @@ def predict(
         train_directory_path, sampling_levels
     )
     progress: tqdm = tqdm(
-        total=len(images) * len(templates) * len(sampling_levels), desc="Predicting Classes"
+        total=len(images) * len(templates) * len(sampling_levels),
+        desc="Predicting",
     )
     for image, image_masked, image_name in images:
         predict_icon_classes(
