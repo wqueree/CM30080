@@ -2,3 +2,4 @@ numpy
 black
 opencv-python
 tqdm
+matplotlib
