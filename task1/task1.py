@@ -260,14 +260,14 @@ def start_method(params):
 
 # Our parameters found during tuning
 params = {
-    "min_edge": 50,
-    "max_edge": 150,
+    "min_edge": 150,
+    "max_edge": 160,
     "kernel_size": 5,
-    "rho": 0.991,
-    "theta": np.pi/180,
-    "threshold": 60,
-    "min_length": 80,
-    "max_gap": 50
+    "rho": 0.99102,
+    "theta": 0.01745329251,
+    "threshold": 62,
+    "min_length": 98,
+    "max_gap": 40
 }
 
 start_method(params)
