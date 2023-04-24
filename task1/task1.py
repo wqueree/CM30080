@@ -5,7 +5,7 @@ import numpy as np
 import sys
 import time
 from sklearn.metrics import mean_squared_error
-from hyperopt import tpe, hp, fmin, STATUS_OK, Trials
+# from hyperopt import tpe, hp, fmin, STATUS_OK, Trials, STATUS_FAIL
 
 
 def time_convert(sec):
@@ -29,8 +29,7 @@ def preprocess_image(img_path: str, kernel_size):
 
     # Read the original image
     img = cv2.imread(img_path)
-    # cv2.imshow("img", img)
-    # cv2.waitKey(0)
+
     # Convert to grayscale
     img_gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
@@ -49,15 +48,14 @@ def detect_edges(img, min_edge, max_edge):
     # Canny Edge Detection
     edges = cv2.Canny(image=img, threshold1=min_edge, threshold2=max_edge)
 
-    # dilated_edges = cv2.dilate(edges, np.ones((2, 2), dtype=np.uint8))
-
-    # cv2.imshow("e", edges)
-    # cv2.waitKey(0)
+    #
+    dilated_edges = cv2.dilate(edges, np.ones((2, 2), dtype=np.uint8))
 
     return edges
 
 
-def detect_lines(path: str, edges: np.array, img_name: str, rho, theta, threshold, min_length, max_gap):
+# Use houghlines to convert edges to points
+def detect_lines(path: str, edges: np.array, rho, theta, threshold, min_length, max_gap):
     lines = cv2.HoughLinesP(edges, rho=rho, theta=theta, threshold=threshold, minLineLength=min_length, maxLineGap=max_gap)
     line_list = []
     img = cv2.imread(path)
@@ -71,11 +69,10 @@ def detect_lines(path: str, edges: np.array, img_name: str, rho, theta, threshol
 
         cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 1)  # add line to image for representation
 
-    # cv2.imwrite(f'houghlines - {img_name}.jpg', img)
-
     return line_list
 
 
+# Function of first approach to calculating angle using gradients
 def calculate_gradients(line_coords: list):
     tolerance = 0.5
     m_1 = None
@@ -105,7 +102,6 @@ def calculate_line_segments(line_coords: list):
     point_2 = line_coords[0][1]
     point_3 = None
     counters = [0, 0, 0]
-
 
     for i in range(1, len(line_coords)):
         x_start = line_coords[i][0][0]
@@ -176,6 +172,7 @@ def calculate_line_segments(line_coords: list):
     return point_1, point_2, point_3
 
 
+# Pythagoras Calculation
 def calculate_distance(point_1, point_2):
     x_difference = point_2[0] - point_1[0]
     y_difference = point_2[1] - point_1[1]
@@ -183,10 +180,11 @@ def calculate_distance(point_1, point_2):
     return math.sqrt((x_difference ** 2) + (y_difference ** 2))
 
 
+# Apply Cosine Rule to the 3 points
 def cosine_rule(point_1, point_2, point_3, path):
     if not point_3 or not point_1 or not point_2:
         print(f"Not enough lines to calculate angle, please ensure {path} and parameters are correct")
-        return 0
+        return -100
     a = calculate_distance(point_1, point_3)
     b = calculate_distance(point_2, point_3)
     c = calculate_distance(point_1, point_2)
@@ -194,6 +192,7 @@ def cosine_rule(point_1, point_2, point_3, path):
     return degrees(acos(((a ** 2) + (b ** 2) - (c ** 2)) / (2 * a * b)))
 
 
+# Calculate the average accuracy from each image
 def calculate_accuracy(true_vals, pred_vals):
     accuracy = []
     for i in range(len(true_vals)):
@@ -205,8 +204,8 @@ def calculate_accuracy(true_vals, pred_vals):
 # Function to apply necessary checks on image list file
 def file_name_checks(args):
     if len(args) == 1:
-        print("Please provide the name of the text file containing image names and angles as an argument.")
-        exit()
+        print("The text file containing image names and angles has not been passed, searching for list.txt by default.")
+        return "list.txt"
     file = sys.argv[1]
     if not file.endswith(".txt"):
         print("Please provide file as a .txt type")
@@ -215,74 +214,60 @@ def file_name_checks(args):
     return file
 
 
-# file_name = file_name_checks(sys.argv)
-# file_name = "./extra_images/list.txt"
-file_name = "list.txt"
-list_file = open(file_name, "r")
-
-
 def start_method(params):
-    # print("PARAMS: ", params)
     min_edge, max_edge, kernel_size, rho, theta, threshold, min_length, max_gap = int(params["min_edge"]), int(params["max_edge"]), int(
-        params["kernel_size"]), float(params["rho"]), int(params["theta"]), int(
+        params["kernel_size"]), float(params["rho"]), float(params["theta"]), int(
         params["threshold"]), float(params["min_length"]), int(params["max_gap"])
     start_time = time.time()
 
-    predicted_accuracy = []
-    real_accuracy = []
-    try:
-        for image_text in list_file:
-            line = image_text.split(',')
+    predicted_angle = []
+    real_angle = []
 
-            # path = "./extra_images/" + line[0]
-            path = line[0]
-            # path = "./extra_images/end=720.png"
-            correct_angle = line[1].replace('\n', '')
-            image = preprocess_image(path, kernel_size)
-            edges = detect_edges(image, min_edge, max_edge)
-            line_coords = detect_lines(path, edges, path, rho, theta, threshold, min_length, max_gap)
+    file_name = file_name_checks(sys.argv)
+    list_file = open(file_name, "r")
 
-            p_1, p_2, p_3 = calculate_line_segments(line_coords)
+    for image_text in list_file:
+        line = image_text.split(',')
+        path = line[0]
+        correct_angle = line[1].replace('\n', '')
 
-            angle = cosine_rule(p_1, p_2, p_3, path)
+        image = preprocess_image(path, kernel_size)
+        edges = detect_edges(image, min_edge, max_edge)
+        line_coords = detect_lines(path, edges, rho, theta, threshold, min_length, max_gap)
 
-            predicted_accuracy.append(angle)
-            real_accuracy.append(int(float(correct_angle)))
+        p_1, p_2, p_3 = calculate_line_segments(line_coords)
 
-            print(f"{path}, Calculated: {angle}, Actual: {correct_angle}")
+        angle = cosine_rule(p_1, p_2, p_3, path)
 
-        print("MSE: ", mean_squared_error(real_accuracy, predicted_accuracy))
-        end_time = time.time()
-        time_lapsed = end_time - start_time
+        predicted_angle.append(angle)
+        real_angle.append(int(float(correct_angle)))
 
-        accuracy = 1 - calculate_accuracy(real_accuracy, predicted_accuracy)
-        print("Accuracy: ", accuracy)
-    except:
-        accuracy = 0
-    return {"loss": -accuracy, "status": STATUS_OK}
-# print(time_lapsed)
+        print(f"{path}, Raw Calculated: {angle}, Floored Calculated: {math.floor(angle)}, Actual: {correct_angle}")
+
+    end_time = time.time()
+
+    # MSE Calculation
+    print("MSE: ", mean_squared_error(real_angle, predicted_angle))
+
+    # Accuracy Calculation
+    accuracy = 1 - calculate_accuracy(real_angle, predicted_angle)
+    print("Accuracy: ", accuracy)
+
+    # Time Lapsed Calculation
+    time_lapsed = end_time - start_time
+    print(f"Time lapsed: {time_lapsed}")
 
 
-space = {
-    "min_edge": hp.uniform("min_edge", 1, 20),
-    "max_edge": hp.uniform("max_edge", 2, 575),
-    "kernel_size": hp.choice("kernel_size", [1, 3, 5, 7, 9, 11, 13, 15]),
-    "rho": hp.uniform("rho", 0, 1),
-    "theta": hp.uniform("theta", 0, np.pi),
-    "threshold": hp.uniform("threshold", 1, 80),
-    "min_length": hp.uniform("min_length", 1, 150),
-    "max_gap": hp.uniform("max_gap", 50, 150)xuu
-
+# Our parameters found during tuning
+params = {
+    "min_edge": 50,
+    "max_edge": 150,
+    "kernel_size": 5,
+    "rho": 0.991,
+    "theta": np.pi/180,
+    "threshold": 55,
+    "min_length": 80,
+    "max_gap": 50
 }
 
-trials = Trials()
-
-best = fmin(
-    fn=start_method,
-    space=space,
-    algo=tpe.suggest,
-    max_evals=100000,
-    trials=trials
-)
-
-print(best)
+start_method(params)
