@@ -3,3 +3,5 @@ black
 opencv-python
 tqdm
 matplotlib
+scikit-learn
+hyperopt
