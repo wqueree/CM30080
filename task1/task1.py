@@ -265,7 +265,7 @@ params = {
     "kernel_size": 5,
     "rho": 0.991,
     "theta": np.pi/180,
-    "threshold": 55,
+    "threshold": 60,
     "min_length": 80,
     "max_gap": 50
 }
