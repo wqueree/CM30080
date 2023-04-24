@@ -242,7 +242,7 @@ def start_method(params):
         predicted_angle.append(angle)
         real_angle.append(int(float(correct_angle)))
 
-        print(f"{path}, Raw Calculated: {angle}, Floored Calculated: {math.floor(angle)}, Actual: {correct_angle}")
+        print(f"{path}, Calculated Angle: {angle}, Actual Angle: {correct_angle}")
 
     end_time = time.time()
 
