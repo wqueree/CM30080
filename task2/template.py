@@ -8,7 +8,7 @@ from color import BLACK
 
 def generate_templates(
     train_directory_path: Path,
-    sampling_levels: List[int] = [4],
+    sampling_levels: List[int] = [3],
 ) -> Dict[str, Dict[int, np.ndarray]]:
     """Gets and crops training icons from the given directory."""
     icon_templates: Dict[str, Dict[int, np.ndarray]] = dict()
