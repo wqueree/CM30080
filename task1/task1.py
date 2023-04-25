@@ -1,11 +1,11 @@
-import cv2
 import math
-from math import fabs, degrees, acos
-import numpy as np
 import sys
 import time
+from math import acos, degrees, fabs
+
+import cv2
+import numpy as np
 from sklearn.metrics import mean_squared_error
-# from hyperopt import tpe, hp, fmin, STATUS_OK, Trials, STATUS_FAIL
 
 
 def time_convert(sec):
@@ -55,8 +55,15 @@ def detect_edges(img, min_edge, max_edge):
 
 
 # Use houghlines to convert edges to points
-def detect_lines(path: str, edges: np.array, rho, theta, threshold, min_length, max_gap):
-    lines = cv2.HoughLinesP(edges, rho=rho, theta=theta, threshold=threshold, minLineLength=min_length, maxLineGap=max_gap)
+def detect_lines(path: str, edges: np.ndarray, rho, theta, threshold, min_length, max_gap):
+    lines = cv2.HoughLinesP(
+        edges,
+        rho=rho,
+        theta=theta,
+        threshold=threshold,
+        minLineLength=min_length,
+        maxLineGap=max_gap,
+    )
     line_list = []
     img = cv2.imread(path)
 
@@ -114,29 +121,33 @@ def calculate_line_segments(line_coords: list):
         #######################################################################
         ## Condition statements to check which points refer with which lines ##
         #######################################################################
-        if fabs(x_start - point_1[0]) < tolerance and fabs(
-                y_start - point_1[1]) < tolerance:  # case - first set of coords with POINT 1
+        if (
+            fabs(x_start - point_1[0]) < tolerance and fabs(y_start - point_1[1]) < tolerance
+        ):  # case - first set of coords with POINT 1
             point_1[0] = (point_1[0] + x_start) / 2
             point_1[1] = (point_1[1] + y_start) / 2
             start = True
             counters[0] += 1
 
-        if fabs(x_end - point_1[0]) < tolerance and fabs(
-                y_end - point_1[1]) < tolerance:  # case - second set of coords with POINT 1
+        if (
+            fabs(x_end - point_1[0]) < tolerance and fabs(y_end - point_1[1]) < tolerance
+        ):  # case - second set of coords with POINT 1
             point_1[0] = (point_1[0] + x_end) / 2
             point_1[1] = (point_1[1] + y_end) / 2
             end = True
             counters[0] += 1
 
-        if fabs(x_start - point_2[0]) < tolerance and fabs(
-                y_start - point_2[1]) < tolerance:  # case - first set of coords with POINT 2
+        if (
+            fabs(x_start - point_2[0]) < tolerance and fabs(y_start - point_2[1]) < tolerance
+        ):  # case - first set of coords with POINT 2
             point_2[0] = (point_2[0] + x_start) / 2
             point_2[1] = (point_2[1] + y_start) / 2
             start = True
             counters[1] += 1
 
-        if fabs(x_end - point_2[0]) < tolerance and fabs(
-                y_end - point_2[1]) < tolerance:  # case - second set of coords with POINT 2
+        if (
+            fabs(x_end - point_2[0]) < tolerance and fabs(y_end - point_2[1]) < tolerance
+        ):  # case - second set of coords with POINT 2
             point_2[0] = (point_2[0] + x_end) / 2
             point_2[1] = (point_2[1] + y_end) / 2
             end = True
@@ -177,19 +188,21 @@ def calculate_distance(point_1, point_2):
     x_difference = point_2[0] - point_1[0]
     y_difference = point_2[1] - point_1[1]
     # pythagoras to find difference
-    return math.sqrt((x_difference ** 2) + (y_difference ** 2))
+    return math.sqrt((x_difference**2) + (y_difference**2))
 
 
 # Apply Cosine Rule to the 3 points
 def cosine_rule(point_1, point_2, point_3, path):
     if not point_3 or not point_1 or not point_2:
-        print(f"Not enough lines to calculate angle, please ensure {path} and parameters are correct")
+        print(
+            f"Not enough lines to calculate angle, please ensure {path} and parameters are correct"
+        )
         return -100
     a = calculate_distance(point_1, point_3)
     b = calculate_distance(point_2, point_3)
     c = calculate_distance(point_1, point_2)
 
-    return degrees(acos(((a ** 2) + (b ** 2) - (c ** 2)) / (2 * a * b)))
+    return degrees(acos(((a**2) + (b**2) - (c**2)) / (2 * a * b)))
 
 
 # Calculate the average accuracy from each image
@@ -204,7 +217,9 @@ def calculate_accuracy(true_vals, pred_vals):
 # Function to apply necessary checks on image list file
 def file_name_checks(args):
     if len(args) == 1:
-        print("The text file containing image names and angles has not been passed, searching for list.txt by default.")
+        print(
+            "The text file containing image names and angles has not been passed, searching for list.txt by default."
+        )
         return "list.txt"
     file = sys.argv[1]
     if not file.endswith(".txt"):
@@ -215,9 +230,16 @@ def file_name_checks(args):
 
 
 def start_method(params):
-    min_edge, max_edge, kernel_size, rho, theta, threshold, min_length, max_gap = int(params["min_edge"]), int(params["max_edge"]), int(
-        params["kernel_size"]), float(params["rho"]), float(params["theta"]), int(
-        params["threshold"]), float(params["min_length"]), int(params["max_gap"])
+    min_edge, max_edge, kernel_size, rho, theta, threshold, min_length, max_gap = (
+        int(params["min_edge"]),
+        int(params["max_edge"]),
+        int(params["kernel_size"]),
+        float(params["rho"]),
+        float(params["theta"]),
+        int(params["threshold"]),
+        float(params["min_length"]),
+        int(params["max_gap"]),
+    )
     start_time = time.time()
 
     predicted_angle = []
@@ -227,9 +249,9 @@ def start_method(params):
     list_file = open(file_name, "r")
 
     for image_text in list_file:
-        line = image_text.split(',')
+        line = image_text.split(",")
         path = line[0]
-        correct_angle = line[1].replace('\n', '')
+        correct_angle = line[1].replace("\n", "")
 
         image = preprocess_image(path, kernel_size)
         edges = detect_edges(image, min_edge, max_edge)
@@ -267,7 +289,7 @@ params = {
     "theta": 0.01745329251,
     "threshold": 62,
     "min_length": 98,
-    "max_gap": 40
+    "max_gap": 40,
 }
 
 start_method(params)
