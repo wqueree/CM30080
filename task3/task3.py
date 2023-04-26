@@ -3,9 +3,28 @@ import numpy as np
 from os import listdir
 from os.path import isfile, join
 import prettytable
+from typing import Tuple
 from segmentation import get_icon_boxes
 
 SHOW = False
+EVAL = False
+
+
+def calculate_iou(box_pred: Tuple[int, int, int, int], box_gt: Tuple[int, int, int, int]) -> float:
+    """Calculates the intersection over union of the given prediction and ground truth boxes."""
+    x1_pred, y1_pred, x2_pred, y2_pred = box_pred
+    x1_gt, y1_gt, x2_gt, y2_gt = box_gt
+    pred_area: int = (x2_pred - x1_pred) * (y2_pred - y1_pred)
+    gt_area: int = (x2_gt - x1_gt) * (y2_gt - y1_gt)
+    x1: int = max(x1_pred, x1_gt)
+    y1: int = max(y1_pred, y1_gt)
+    x2: int = min(x2_pred, x2_gt)
+    y2: int = min(y2_pred, y2_gt)
+    if x1 > x2 or y1 > y2:
+        return 0.0
+    intersection_area: int = (x2 - x1) * (y2 - y1)
+    union_area: int = pred_area + gt_area - intersection_area
+    return intersection_area / union_area if union_area > 0 else 0.0
 
 
 def draw_bounding_box(image, box, icon_num, icon_name):
@@ -92,9 +111,8 @@ def main(params):
 
     bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
     i = 0
-    accuracy = 0
     precision = []
-    recall = []
+    recall_all = []
     # read in test image one at a time
     for test_image in test_image_paths:
         test_predicted_icons = []
@@ -139,6 +157,14 @@ def main(params):
                     test_predicted_icons.append(icon_name)
                     test_image_boxes.append(((box[0], box[1]), (box[0] + box[2], box[1] + box[3])))
 
+        if EVAL:
+            name = test_image.split("/")
+            predicted_filename = name[1] + "-" + name[3][:-4]
+            with open(f"./predicted/{predicted_filename}.txt", "w") as f:
+                for n in range(len(test_predicted_icons)):
+                    f.write(f"{test_predicted_icons[n]}, {str(test_image_boxes[n][0])}, {str(test_image_boxes[n][1])}\n")
+            f.close()
+
         # Compare predicted to actual icons
         predicted_icons_set = set(test_predicted_icons)
         test_annotated_features = get_test_annotations(test_image_annotations_paths[i])
@@ -150,12 +176,12 @@ def main(params):
         false_positive_set = predicted_icons_set.difference(actual_icons_set)
         false_negative_set = actual_icons_set.difference(predicted_icons_set)
 
-        accuracy = round(len(true_positive_icons) / all_icons_len * 100, 1)
+        recall = round(len(true_positive_icons) / all_icons_len * 100, 1)
 
         # Print out results
         test_image_name = test_image.split("/")[-1][:-4]
         x = prettytable.PrettyTable(hrules=1)
-        x.field_names = ["File: " + test_image_name, "Accuracy: " + str(accuracy) + "%"]
+        x.field_names = ["File: " + test_image_name, "Recall: " + str(recall) + "%"]
         x.add_row(["True Positives: " + ", ".join(true_positive_icons), "False Positives: "
                    + (", ".join(false_positive_set) if len(false_positive_set) != 0 else "N/A")])
         x.add_row(["False Negatives: " +
@@ -163,7 +189,7 @@ def main(params):
         print(x)
 
         precision.append(len(true_positive_icons) / (len(true_positive_icons) + len(false_positive_set)))
-        recall.append(len(true_positive_icons) / (len(true_positive_icons) + len(false_negative_set)))
+        recall_all.append(len(true_positive_icons) / (len(true_positive_icons) + len(false_negative_set)))
 
         if SHOW:
             cv2.imshow('image', test_image_array)
@@ -171,6 +197,10 @@ def main(params):
             cv2.destroyAllWindows()
 
         i += 1
+
+    if EVAL:
+        print(f"Precision: {np.mean(precision)}")
+        print(f"Recall: {np.mean(recall_all)}")
 
 
 tuned_params = {'RNSCThresh': 10.759948009735304, 'SIFT': {'contrastThreshold': 0.004139086378011707,
@@ -180,3 +210,46 @@ tuned_params = {'RNSCThresh': 10.759948009735304, 'SIFT': {'contrastThreshold': 
                 'resize_segment_icon': 5}
 
 main(tuned_params)
+
+if EVAL:
+    predicted_test_image_boxes_path = "./predicted/"
+    predicted_test_image_boxes = sorted(get_dir_files(predicted_test_image_boxes_path))
+
+    test_image_annotations_paths = sorted(test_image_annotations_paths)
+
+    all_iou = []
+    for i in range(len(test_image_annotations_paths)):
+
+        # get and sort ground truth annotations
+        annotations_path = test_image_annotations_paths[i]
+        test_annotations_list = get_test_annotations(annotations_path)
+        test_annotations = sorted(test_annotations_list, key=lambda x: x[0])
+
+        # get and sort predicted annotations
+        predicted_annotations_path = predicted_test_image_boxes[i]
+        predicted_annotations_list = get_test_annotations(predicted_annotations_path)
+        predicted_annotations = sorted(predicted_annotations_list, key=lambda x: x[0])
+
+        for n in range(len(test_annotations)):
+            try:
+                test_x1, test_y1 = tuple(
+                    int(num) for num in
+                    test_annotations[n][1].replace('(', '').replace(')', '').replace('...', '').split(', '))
+                test_x2, test_y2 = tuple(
+                    int(num) for num in
+                    test_annotations[n][2].replace('(', '').replace(')', '').replace('...', '').split(', '))
+
+                predicted_x1, predicted_y1 = tuple(
+                    int(num) for num in
+                    predicted_annotations[n][1].replace('(', '').replace(')', '').replace('...', '').split(', '))
+                predicted_x2, predicted_y2 = tuple(
+                    int(num) for num in
+                    predicted_annotations[n][2].replace('(', '').replace(')', '').replace('...', '').split(', '))
+
+                iou = calculate_iou((predicted_x1, predicted_y1, predicted_x2, predicted_y2),
+                                    (test_x1, test_y1, test_x2, test_y2))
+            except:
+                iou = 0
+            all_iou.append(iou)
+
+    print(f"IoU: {np.average(all_iou)}")
