@@ -184,7 +184,6 @@ def main(params):
             cv2.destroyAllWindows()
 
         i += 1
-    print(f"total accuracy: {accuracy} with PARAMS: {params}")
 
 
 tuned_params = {'RNSCThresh': 10.759948009735304, 'SIFT': {'contrastThreshold': 0.004139086378011707,
