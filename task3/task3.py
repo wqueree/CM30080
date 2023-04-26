@@ -176,12 +176,12 @@ def main(params):
         false_positive_set = predicted_icons_set.difference(actual_icons_set)
         false_negative_set = actual_icons_set.difference(predicted_icons_set)
 
-        recall = round(len(true_positive_icons) / all_icons_len * 100, 1)
+        recall = len(true_positive_icons) / all_icons_len
 
         # Print out results
         test_image_name = test_image.split("/")[-1][:-4]
         x = prettytable.PrettyTable(hrules=1)
-        x.field_names = ["File: " + test_image_name, "Recall: " + str(recall) + "%"]
+        x.field_names = ["File: " + test_image_name, "Recall: " + str(recall)]
         x.add_row(["True Positives: " + ", ".join(true_positive_icons), "False Positives: "
                    + (", ".join(false_positive_set) if len(false_positive_set) != 0 else "N/A")])
         x.add_row(["False Negatives: " +
