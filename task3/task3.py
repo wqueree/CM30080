@@ -7,7 +7,7 @@ from typing import Tuple
 from segmentation import get_icon_boxes
 
 SHOW = False
-EVAL = False
+EVAL = True
 
 
 def calculate_iou(box_pred: Tuple[int, int, int, int], box_gt: Tuple[int, int, int, int]) -> float:
@@ -132,7 +132,7 @@ def main(params):
                 for match in matches:
                     if len(match) == 2:
                         m, n = match
-                        if m.distance < params['distanceThreshold'] * n.distance:
+                        if m.distance < params['maxRatio'] * n.distance:
                             valid_matches.append([m])
 
                 # need at least 4 for RANSAC to work
@@ -206,7 +206,7 @@ def main(params):
 tuned_params = {'RNSCThresh': 10.759948009735304, 'SIFT': {'contrastThreshold': 0.004139086378011707,
                                                            'edgeThreshold': 17.310486555802317, 'nOctaveLayers': 7,
                                                            'nfeatures': 1900, 'sigma': 2.1741346835913578},
-                'distanceThreshold': 0.6779285821510288, 'inliers': 4, 'resize_sift_image': 95,
+                'maxRatio': 0.6779285821510288, 'inliers': 4, 'resize_sift_image': 95,
                 'resize_segment_icon': 5}
 
 main(tuned_params)
