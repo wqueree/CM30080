@@ -65,3 +65,19 @@ python ./evaluate.py --pred_path_root ./predict/annotations/3 --gt_path_root ./t
 This will output evaluation scores for the predictions in `./predict/annotations/3` against the ground truth values in `./test/annotations`.
 
 ### Task 3
+
+#### Prediction and Evaluation
+
+1. Change into the directory `task3`:
+
+```bash
+cd ./task3
+```
+
+2. Run `task3.py`:
+
+```
+python ./task3.py
+````
+
+This will output the TP, FP, FN and recall for each image. You can change the output type with the boolean SHOW and EVAL variables at the beginning of tas3.py.
