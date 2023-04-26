@@ -77,7 +77,7 @@ cd ./task3
 2. Run `task3.py`:
 
 ```
-python ./task3.py
+python ./task3.py --train_image_directory ./train_images/ --test_image_directory ./TestWithoutRotations/images/ --test_annotation_directory ./TestWithoutRotations/annotations/ --additional_test_image_directory ./Task3AdditionalTestDataset/images/ --additional_test_annotation_directory ./Task3AdditionalTestDataset/annotations/
 ````
 
 This will output the TP, FP, FN and recall for each image. You can change the output type with the boolean SHOW and EVAL variables at the beginning of `task3.py`.
