@@ -11,25 +11,21 @@ def pad_image(x_1, y_1, x_2, y_2, width, height):
 
 
 def get_rotated_box(contour, scale):
-    min_rect = cv2.minAreaRect(contour)
-    (center, size, angle) = min_rect
+    (center, size, angle) = cv2.minAreaRect(contour)
 
-    # Scale the min_rect back to the original image size
+    # Change the variables to original size
     center = tuple(np.array(center) / scale)
     size = tuple(np.array(size) / scale)
 
-    # Create a new min_rect with the scaled values
-    scaled_min_rect = (center, size, angle)
-
-    # Convert the min_rect to a 4-point bounding box
-    box = cv2.boxPoints(scaled_min_rect)
+    # Convert the box to a 4-point bounding box
+    box = cv2.boxPoints((center, size, angle))
     box = np.int0(box)
     return box
 
 
-def get_icon_boxes(image, resize_test_scale, show=False):
+def get_icon_boxes(image, resize_segment_icon, show=False):
     width, height = image.shape[:2]
-    resized_image = cv2.resize(image, None, fx=resize_test_scale, fy=resize_test_scale, interpolation=cv2.INTER_LINEAR)
+    resized_image = cv2.resize(image, None, fx=resize_segment_icon, fy=resize_segment_icon, interpolation=cv2.INTER_LINEAR)
     blurred_image = cv2.GaussianBlur(resized_image, (5, 5), 0)
 
     # Apply binary thresholding to create a binary image
@@ -37,22 +33,22 @@ def get_icon_boxes(image, resize_test_scale, show=False):
 
     # Apply morphological opening to remove noise
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+    morph_open = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
 
     # Perform morphological closing to remove small holes in the objects
-    closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+    morph_closed = cv2.morphologyEx(morph_open, cv2.MORPH_CLOSE, kernel)
 
     # Find contours in the image
-    contours, hierarchy = cv2.findContours(closed, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(morph_closed, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     bounding_coords = []
     for cnt in contours:
-        x, y, w, h = [round(i / resize_test_scale) for i in cv2.boundingRect(cnt)]
+        x, y, w, h = [round(i / resize_segment_icon) for i in cv2.boundingRect(cnt)]
         # some contours were too small so best to remove
         if w * h < 500:
             continue
         x, y, w, h = pad_image(x, y, x + w, y + h, width, height)
-        bounding_coords.append(((x, y, w, h), get_rotated_box(cnt, resize_test_scale)))
+        bounding_coords.append(((x, y, w, h), get_rotated_box(cnt, resize_segment_icon)))
 
     # check if a bounding box is contained completely within another
     i = 0
