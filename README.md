@@ -80,4 +80,4 @@ cd ./task3
 python ./task3.py
 ````
 
-This will output the TP, FP, FN and recall for each image. You can change the output type with the boolean SHOW and EVAL variables at the beginning of tas3.py.
+This will output the TP, FP, FN and recall for each image. You can change the output type with the boolean SHOW and EVAL variables at the beginning of `task3.py`.
